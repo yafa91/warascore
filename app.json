@@ -5,7 +5,7 @@
       "platforms": ["ios", "android"],
       "splash": {
         "resizeMode": "contain",  
-        "backgroundColor": "#ffffff"  // La couleur de fond du splash screen
+        "backgroundColor": "#ffffff"  
       },
       "ios": {
         "bundleIdentifier": "com.tesapp.nom",

@@ -11,3 +11,14 @@ function HomeScreen() {
   }
 
 
+  import { ThemeProvider } from "../../context/ThemeContext";
+  import SettingsScreen from "../../screens/SettingsScreen";
+  
+  export default function App() {
+    return (
+      <ThemeProvider>
+        <SettingsScreen />
+      </ThemeProvider>
+    );
+  }
+  

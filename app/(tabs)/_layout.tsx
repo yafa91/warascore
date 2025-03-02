@@ -2,6 +2,7 @@ import { Tabs } from "expo-router";
 import {Ionicons} from "@expo/vector-icons";
 import Feather from '@expo/vector-icons/Feather';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import AntDesign from '@expo/vector-icons/AntDesign';
 
 const TabsNavigation = () => {
 	return (
@@ -10,7 +11,7 @@ const TabsNavigation = () => {
 			screenOptions={{
 				headerShown: false,
 				tabBarStyle: {
-					backgroundColor: '#FFFFFF',
+					backgroundColor: '#121212',
 					borderTopWidth: 0,
 					elevation: 0,
 					height: 100,
@@ -21,7 +22,7 @@ const TabsNavigation = () => {
 				tabBarInactiveTintColor: '#8E8E93',
 				tabBarLabelStyle: {
 					fontFamily: 'Satoshi-Variable',
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: "bold"
 				},
 			}}
@@ -53,19 +54,6 @@ const TabsNavigation = () => {
 				}}
 			/>
 			<Tabs.Screen
-				name="news"
-				options={{
-					title: 'News',
-					tabBarIcon: ({ focused, color }) => (
-						<Ionicons
-							name={'newspaper-outline'}
-							size={24}
-							color={color}
-						/>
-					),
-				}}
-			/>
-            <Tabs.Screen
 				name="favoris"
 				options={{
 					title: 'Favoris',
@@ -78,8 +66,22 @@ const TabsNavigation = () => {
 					),
 				}}
 			/>
+            <Tabs.Screen
+				name="profil"
+				options={{
+					title: 'Profil',
+					tabBarIcon: ({ focused, color }) => (
+						<AntDesign
+							name={'adduser'}
+							size={24}
+							color={color}
+						/>
+					),
+				}}
+			/>
 		</Tabs>
 	);
 };
 
 export default TabsNavigation;
+

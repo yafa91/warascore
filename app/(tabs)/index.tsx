@@ -1,15 +1,25 @@
 import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Animated } from "react-native";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useContext } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import React from "react";
 import { ThemeProvider } from "@/context/ThemeContext";
 import SettingsScreen from "@/screens/SettingsScreen";
+import { ThemeContext } from "@/context/ThemeContext";
 
 const API_URL = "https://api.football-data.org/v4/matches";
 const API_KEY = "26ed6598240b4a39b1522f826539b998";
 
 export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  );
+}
+
+
+export  function AppContent() {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState("");
   const [dates, setDates] = useState([]);
@@ -17,6 +27,12 @@ export default function App() {
   const [expandedMatch, setExpandedMatch] = useState(null);
   const [notifications, setNotifications] = useState({});
   const scrollX = useRef(new Animated.Value(0)).current;
+
+  // 
+  const { theme, toggleTheme } = useContext(ThemeContext);
+  const isDark = theme === 'dark';
+
+  console.log(isDark);
 
   const getCurrentDate = () => {
     const today = new Date();

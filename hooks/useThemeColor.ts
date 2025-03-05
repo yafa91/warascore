@@ -5,6 +5,10 @@
 
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { DarkTheme, DefaultTheme } from '@react-navigation/native';
+import { useContext } from "react";
+
+
 
 export function useThemeColor(
   props: { light?: string; dark?: string },

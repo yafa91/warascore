@@ -1,23 +1,33 @@
-import React, { createContext, useState, useContext } from "react";
-import { Provider as PaperProvider, DefaultTheme, DarkTheme } from "react-native-paper";
+import React, { createContext, useEffect, useState } from 'react';
+import { useColorScheme } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const ThemeContext = createContext();
+export const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-  const [darkMode, setDarkMode] = useState(false);
+  const systemTheme = useColorScheme(); // Thème du système
+  const [theme, setTheme] = useState(systemTheme); // Thème actif
 
-  const toggleTheme = () => {
-    setDarkMode((prev) => !prev);
+  useEffect(() => {
+    const loadTheme = async () => {
+      const storedTheme = await AsyncStorage.getItem('theme');
+      if (storedTheme) {
+        setTheme(storedTheme);
+      } else {
+        setTheme(systemTheme);
+      }
+    };
+    loadTheme();
+  }, [systemTheme]);
+
+  const toggleTheme = async (selectedTheme) => {
+    setTheme(selectedTheme);
+    await AsyncStorage.setItem('theme', selectedTheme);
   };
 
-  const theme = darkMode ? DarkTheme : DefaultTheme;
-
   return (
-    <ThemeContext.Provider value={{ darkMode, toggleTheme }}>
-      <PaperProvider theme={theme}>{children}</PaperProvider>
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      {children}
     </ThemeContext.Provider>
   );
 };
-
-// Hook personnalisé pour accéder au thème
-export const useTheme = () => useContext(ThemeContext);

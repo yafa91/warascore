@@ -1,3 +1,4 @@
+
 import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Animated, Button, FlatList} from "react-native";
 import { useEffect, useState, useRef, useContext } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -7,7 +8,6 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import SettingsScreen from "@/screens/SettingsScreen";
 import { ThemeContext } from "@/context/ThemeContext";
 import { Item } from "react-native-paper/lib/typescript/components/Drawer/Drawer";
-
 const API_URL = "https://api.football-data.org/v4/matches";
 const API_KEY = "26ed6598240b4a39b1522f826539b998";
 
@@ -172,7 +172,7 @@ export  function AppContent() {
         </View>   
         {/****************Upcoming******************************* */}
 
-        <FlatList data={liveSoreList}  renderItem={ScoreList}></FlatList>
+        <FlatList data={liveScoreList2}  renderItem={ScoreList}></FlatList>
 
         <Animated.ScrollView 
           horizontal 

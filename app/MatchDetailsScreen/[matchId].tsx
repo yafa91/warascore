@@ -6,6 +6,10 @@ import axios from 'axios';
 import { useNavigation, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useLayoutEffect } from 'react';
+
+import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
+import { Dimensions } from 'react-native';
+
 import { useRef } from 'react';
 
 import {
@@ -180,29 +184,38 @@ useEffect(() => {
     );
   }
 
-  if (!fixture || !stats) {
-    return (
-      <View style={styles.loading}>
-        <Text style={{ color: "#fff" }}>Aucune donnée disponible.</Text>
-      </View>
-    );
-  }
-
+if (!fixture) {
   return (
-    <ScrollView style={styles.container}>
-      <MatchCard fixture={fixture} events={events} />
-      <Text style={styles.sectionTitle}>Statistiques</Text>
-      <StatRow label="Possession de balle" home={stats.possession.home} away={stats.possession.away} isPercent />
-      <StatRow label="Tirs totaux" home={stats.totalShots.home} away={stats.totalShots.away} />
-      <StatRow label="Tirs cadrés" home={stats.shotsOnTarget.home} away={stats.shotsOnTarget.away} />
-      <StatRow label="Corners" home={stats.corners.home} away={stats.corners.away} />
-      <StatRow label="Fautes" home={stats.fouls.home} away={stats.fouls.away} />
-      <StatRow label="Hors-jeu" home={stats.offsides.home} away={stats.offsides.away} />
-      <StatRow label="Cartons jaunes" home={stats.yellowCards.home} away={stats.yellowCards.away} />
-      <StatRow label="Cartons rouges" home={stats.redCards.home} away={stats.redCards.away} />
-      <StatRow label="Passes réussies" home={stats.passSuccess.home} away={stats.passSuccess.away} isPercent />
-    </ScrollView>
+    <View style={styles.loading}>
+      <Text style={{ color: "#fff" }}>Aucune donnée disponible.</Text>
+    </View>
   );
+}
+
+return (
+  <ScrollView style={styles.container}>
+    <MatchCard fixture={fixture} events={events} />
+
+    {stats ? (
+      <>
+        <Text style={styles.sectionTitle}>Statistiques</Text>
+        <StatRow label="Possession de balle" home={stats.possession.home} away={stats.possession.away} isPercent />
+        <StatRow label="Tirs totaux" home={stats.totalShots.home} away={stats.totalShots.away} />
+        <StatRow label="Tirs cadrés" home={stats.shotsOnTarget.home} away={stats.shotsOnTarget.away} />
+        <StatRow label="Corners" home={stats.corners.home} away={stats.corners.away} />
+        <StatRow label="Fautes" home={stats.fouls.home} away={stats.fouls.away} />
+        <StatRow label="Hors-jeu" home={stats.offsides.home} away={stats.offsides.away} />
+        <StatRow label="Cartons jaunes" home={stats.yellowCards.home} away={stats.yellowCards.away} />
+        <StatRow label="Cartons rouges" home={stats.redCards.home} away={stats.redCards.away} />
+        <StatRow label="Passes réussies" home={stats.passSuccess.home} away={stats.passSuccess.away} isPercent />
+      </>
+    ) : (
+      <Text style={{ color: "#ccc", textAlign: "center", marginTop: 10 }}>
+        Statistiques non disponibles pour le moment.
+      </Text>
+    )}
+  </ScrollView>
+);
 }
 
 const MatchCard = ({ fixture, events }) => {

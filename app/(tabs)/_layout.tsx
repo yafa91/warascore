@@ -1,5 +1,6 @@
+
 import { Tabs } from "expo-router";
-import {Ionicons} from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import Feather from '@expo/vector-icons/Feather';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AntDesign from '@expo/vector-icons/AntDesign';
@@ -14,16 +15,13 @@ const TabsNavigation = () => {
 					backgroundColor: '#121212',
 					borderTopWidth: 0,
 					elevation: 0,
-					height: 100,
-					paddingBottom: 60,
-					paddingTop: 10,
 				},
 				tabBarActiveTintColor: '#3C50E0',
 				tabBarInactiveTintColor: '#8E8E93',
 				tabBarLabelStyle: {
 					fontFamily: 'Satoshi-Variable',
-                    fontSize: 16,
-                    fontWeight: "bold"
+					fontSize: 16,
+					fontWeight: "bold"
 				},
 			}}
 		>
@@ -40,7 +38,7 @@ const TabsNavigation = () => {
 					),
 				}}
 			/>
-            <Tabs.Screen
+			<Tabs.Screen
 				name="live"
 				options={{
 					title: 'Live',
@@ -66,7 +64,7 @@ const TabsNavigation = () => {
 					),
 				}}
 			/>
-            <Tabs.Screen
+			<Tabs.Screen
 				name="profil"
 				options={{
 					title: 'Profil',

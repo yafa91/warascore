@@ -1,93 +1,104 @@
-import { View, Text, useColorScheme, StyleSheet } from "react-native";
-
-
-{/*
-export default function NewsPage() {
-  return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#121212" }}>
-      <Text style={{ fontSize: 36 }}></Text>
-    </View>
-  );
-}
-
-*/} 
-
-
-
-import React, { useContext, useState } from "react";
-import { Switch } from "react-native";
-import { Appbar, List, Button } from "react-native-paper";
-import useTheme from "@/hooks/use-theme";
-import { ThemeContext, ThemeProvider } from "@/context/ThemeContext";
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { Octicons } from '@expo/vector-icons';
 
 export default function SettingsScreen() {
-  return (
-    <ThemeProvider>
-      <SettingsContent />
-    </ThemeProvider>
-  );
-}
-
-function SettingsContent() {
-  const isdark = useColorScheme() === 'dark';
-  /*
-  if(isdark){
-    console.log('dark');
-  }else{
-    console.log('light');
-  }
-    */
-  const isDarkmode = useTheme();
-  //console.log(isDarkmode);
-
-  if (isDarkmode) {
-    console.log('dark');
-  } else {
-    console.log('light');
-  }
-  const [darkMode, setDarkMode] = useState(true);
-
-  ///////
-  const { theme, toggleTheme } = useContext(ThemeContext);
-  const isDark = theme === 'dark';
+  const router = useRouter();
 
   return (
-      <View style={[styles.container, isDark ? styles.dark : styles.light]}>
-      <Text style={isDark ? styles.darkText : styles.lightText}>
-        Thème actuel : {theme}
-      </Text>
-      <Button
-        mode="contained"
-        onPress={() => toggleTheme(isDark ? 'light' : 'dark')}
-      >
-        {isDark ? 'Passer en Light Mode' : 'Passer en Dark Mode'}
-      </Button>
+    <View style={styles.container}>
+      <Text style={styles.title}>Profil</Text>
+
+      {/* Notifications Push */}
+<Text style={styles.sectionTitle}>Notifications Push</Text>
+<TouchableOpacity onPress={() => router.push('/paramater/notificationsParamater')} style={styles.row}>
+  <Ionicons name="notifications-outline" size={22} color="white" />
+  <Text style={styles.label}>Paramètres de notifications</Text>
+  <Ionicons name="chevron-forward" size={20} color="gray" />
+</TouchableOpacity>
+
+{/* Utilisateur */}
+<Text style={styles.sectionTitle}>Utilisateur</Text>
+<View style={styles.row}>
+  <Ionicons name="person-outline" size={22} color="white" />
+  <Text style={styles.label}>Non connecté</Text>
+  <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/login')}>
+    <Text style={styles.loginButtonText}>CONNEXION</Text>
+  </TouchableOpacity>
+</View>
+
+{/* Passer à WaraScore+ */}
+<Text style={styles.sectionTitle}>Passer à WaraScore+</Text>
+<TouchableOpacity onPress={() => router.push('/paramater/WaraScorePlus')} style={styles.row}>
+  <MaterialIcons name="block" size={22} color="white" />
+  <Text style={styles.label}>Supprimer les bannières publicitaires</Text>
+  <Ionicons name="chevron-forward" size={20} color="gray" />
+</TouchableOpacity>
+
+{/* Pronos */}
+<Text style={styles.sectionTitle}>Mes pronostics</Text>
+<TouchableOpacity onPress={() => router.push('/paramater/prono')} style={styles.row}>
+  <MaterialCommunityIcons name="format-list-checks" size={22} color="white" />
+  <Text style={styles.label}>Voir mes pronos</Text>
+  <Ionicons name="chevron-forward" size={20} color="gray" />
+</TouchableOpacity>
+
+{/* Lien rapide */}
+<Text style={styles.sectionTitle}>Lien rapide</Text>
+<TouchableOpacity onPress={() => router.push('/paramater/programmeTV')} style={styles.row}>
+  <MaterialCommunityIcons name="television-classic" size={22} color="white" />
+  <Text style={styles.label}>Programme TV</Text>
+  <Ionicons name="chevron-forward" size={20} color="gray" />
+</TouchableOpacity>
     </View>
-    
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    backgroundColor: '#121212',
+    paddingTop: 60,
+    paddingHorizontal: 20,
+  },
+  title: {
+    fontSize: 24,
+    color: 'white',
+    fontWeight: 'bold',
+    marginBottom: 30,
+  },
+  sectionTitle: {
+    color: 'gray',
+    fontSize: 14,
+    marginBottom: 10,
+    marginTop: 20,
+  },
+  row: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#121212',
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    marginBottom: 5,
   },
-  dark: {
-    backgroundColor: '#333',
+  label: {
+    color: 'white',
+    marginLeft: 12,
+    flex: 1,
+    fontSize: 16,
   },
-  light: {
-    backgroundColor: '#fff',
+  loginButton: {
+    backgroundColor: '#334155',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 8,
   },
-  darkText: {
+  loginButtonText: {
     color: '#fff',
-  },
-  lightText: {
-    color: '#000',
+    fontWeight: 'bold',
+    fontSize: 13,
   },
 });
-
-
-
-

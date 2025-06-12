@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
-import Icon from 'react-native-vector-icons/Feather';
+import Icon from "react-native-vector-icons/Feather";
 import {
   View,
   Text,
@@ -12,6 +12,13 @@ import {
   Image,
   ScrollView,
 } from "react-native";
+import {
+  getFavorites,
+  addFavorite,
+  removeFavorite,
+  isFavorite,
+} from "../../utils/favoriteUtils";
+import { useFavorites } from "@/context/FavoritesContext";
 
 const API_KEY = "b8b570d6f3ff7a8653dee3fb8922d929";
 const BASE_URL = "https://v3.football.api-sports.io/fixtures";
@@ -46,7 +53,7 @@ const leagues = [
     id: 140,
     name: "La Liga",
     logo: "https://upload.wikimedia.org/wikipedia/en/e/e1/Serie_A_logo_%282019%29.svg",
-  }, 
+  },
   {
     id: 40,
     name: "Championship",
@@ -55,9 +62,10 @@ const leagues = [
 ];
 
 const leagueIdsToInclude = [
-  1, 2, 3, 4, 5, 6, 9, 11, 13, 14, 16, 17, 39, 40, 61, 62, 78,
-  88, 94, 98, 135, 136, 140, 143, 2000, 2001, 2002, 98, 307, 
-  203, 253, 263, 264, 266, 292, 307, 848, 210, 30, 15, 858, 36, 34, 31, 894, 32, 239, 859, 38, 131, 141, 240 ];
+  1, 2, 3, 4, 5, 6, 9, 11, 13, 14, 16, 17, 39, 40, 61, 62, 78, 88, 94, 98, 135,
+  136, 140, 143, 2000, 2001, 2002, 98, 307, 203, 253, 263, 264, 266, 292, 307,
+  848, 210, 30, 15, 858, 36, 34, 31, 894, 32, 239, 859, 38, 131, 141, 240,
+];
 
 export default function LivePage() {
   const navigation = useNavigation();
@@ -66,16 +74,7 @@ export default function LivePage() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState("live");
   const [selectedLeagueId, setSelectedLeagueId] = useState(null);
-  
-  const [favoriteMatches, setFavoriteMatches] = useState([]);
-
-  const toggleFavorite = (matchId) => {
-    setFavoriteMatches((prevFavorites) =>
-      prevFavorites.includes(matchId)
-        ? prevFavorites.filter((id) => id !== matchId)
-        : [...prevFavorites, matchId]
-    );
-  };
+  const { favorites, setFavorites, refreshFavorites } = useFavorites();
 
   useEffect(() => {
     Animated.loop(
@@ -99,6 +98,24 @@ export default function LivePage() {
     const interval = setInterval(fetchMatches, 20000);
     return () => clearInterval(interval);
   }, [viewMode, selectedLeagueId]);
+
+  const toggleFavorite = async (item: any, isFav: boolean) => {
+    try {
+      if (isFav) {
+        const response = await removeFavorite(item);
+        if (response) {
+          await refreshFavorites();
+        }
+      } else {
+        const response = await addFavorite(item);
+        if (response) {
+          await refreshFavorites();
+        }
+      }
+    } catch (error) {
+      console.error("Erreur lors de la modification des favoris:", error);
+    }
+  };
 
   const fetchMatches = async () => {
     setLoading(true);
@@ -153,27 +170,37 @@ export default function LivePage() {
   const renderItem = ({ item }) => {
     const { fixture, teams, goals, league } = item;
     const elapsed = fixture.status.elapsed;
-    const isFavorite = favoriteMatches.includes(item.fixture.id);
-
+    const isFav =
+      favorites?.some((fav) => fav.fixture.id === item.fixture.id) || false;
 
     return (
       <TouchableOpacity
         style={styles.matchCard}
-        onPress={() => navigation.navigate('app/MatchDetailsScreen/[matchId].tsx', { matchId: item.fixture.id })}
-
+        onPress={() =>
+          navigation.navigate(
+            `MatchDetailsScreen/MatchDetailsScreen/${item.fixture.id}`,
+            {
+              matchId: item.fixture.id,
+            }
+          )
+        }
         activeOpacity={0.8}
       >
-         <View style={styles.header}>
-  <View style={styles.leagueContainer}>
-    {league.logo && (
-      <Image source={{ uri: league.logo }} style={styles.leagueLogo} />
-    )}
-    <Text style={styles.league}>{league.name}</Text>
-  </View>
-   <TouchableOpacity onPress={() => toggleFavorite(item.fixture.id)}>
-  <Icon name={isFavorite ? "bell-off" : "bell"} size={20} color={isFavorite ? "red" : "#fff"} />
-</TouchableOpacity>
-</View>
+        <View style={styles.header}>
+          <View style={styles.leagueContainer}>
+            {league.logo && (
+              <Image source={{ uri: league.logo }} style={styles.leagueLogo} />
+            )}
+            <Text style={styles.league}>{league.name}</Text>
+          </View>
+          <TouchableOpacity onPress={() => toggleFavorite(item, isFav)}>
+            <Icon
+              name={isFav ? "bell-off" : "bell"}
+              size={20}
+              color={isFav ? "red" : "#fff"}
+            />
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.teams}>
           <View style={styles.teamBlock}>
@@ -182,22 +209,22 @@ export default function LivePage() {
           </View>
 
           <View style={styles.centerBlock}>
-             <Text style={styles.time}>
-  {fixture.status.short === "HT"
-    ? "Mi-temps"
-    : fixture.status.short === "FT"
-    ? "Terminé"
-    : fixture.status.short === "1H" && fixture.status.elapsed === 45
-    ? "45'+"
-    : fixture.status.short === "2H" && fixture.status.elapsed === 90
-    ? "90'+"
-    : fixture.status.elapsed !== null
-    ? `${fixture.status.elapsed}'`
-    : fixture.status.short}
-</Text>
+            <Text style={styles.time}>
+              {fixture.status.short === "HT"
+                ? "Mi-temps"
+                : fixture.status.short === "FT"
+                ? "Terminé"
+                : fixture.status.short === "1H" && fixture.status.elapsed === 45
+                ? "45'+"
+                : fixture.status.short === "2H" && fixture.status.elapsed === 90
+                ? "90'+"
+                : fixture.status.elapsed !== null
+                ? `${fixture.status.elapsed}'`
+                : fixture.status.short}
+            </Text>
 
             <Text style={styles.score}>
-              {goals.home}  -  {goals.away}
+              {goals.home} - {goals.away}
             </Text>
           </View>
 
@@ -209,11 +236,12 @@ export default function LivePage() {
       </TouchableOpacity>
     );
   };
-  
- 
+
   return (
     <View style={styles.container}>
-      <View style={{ flexDirection: "row", marginBottom: 20, alignItems: "center" }}>
+      <View
+        style={{ flexDirection: "row", marginBottom: 20, alignItems: "center" }}
+      >
         <TouchableOpacity
           style={[styles.button, viewMode === "live" && styles.buttonActive]}
           onPress={() => {
@@ -223,7 +251,10 @@ export default function LivePage() {
         >
           <Animated.View style={[styles.redDot, { opacity: blinkAnim }]} />
           <Text
-            style={[styles.buttonText, viewMode === "live" && styles.buttonTextActive]}
+            style={[
+              styles.buttonText,
+              viewMode === "live" && styles.buttonTextActive,
+            ]}
           >
             Live
           </Text>
@@ -248,7 +279,12 @@ export default function LivePage() {
             >
               <Image
                 source={{ uri: league.logo }}
-                style={{ width: 20, height: 20, marginRight: 6, resizeMode: "contain" }}
+                style={{
+                  width: 20,
+                  height: 20,
+                  marginRight: 6,
+                  resizeMode: "contain",
+                }}
               />
               <Text
                 style={[
@@ -264,7 +300,11 @@ export default function LivePage() {
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="white" style={{ marginTop: 40 }} />
+        <ActivityIndicator
+          size="large"
+          color="white"
+          style={{ marginTop: 40 }}
+        />
       ) : matches.length === 0 ? (
         <Text style={styles.emptyText}>Aucun match trouvé.</Text>
       ) : (
@@ -396,6 +436,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
     marginTop: 40,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
 });

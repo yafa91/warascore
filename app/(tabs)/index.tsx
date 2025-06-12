@@ -1,7 +1,5 @@
 import React, { useEffect, useState, useRef, useContext } from "react";
-import { Dimensions } from "react-native";
-import warasplash from "../../assets/images/wara2.png";
-import { FavorisProvider } from './FavorisContext';
+import { Dimensions, Easing } from "react-native";
 import {
   View,
   Text,
@@ -16,68 +14,41 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ThemeProvider, ThemeContext } from "@/context/ThemeContext";
 import { router, useRouter } from "expo-router";
-import { addFavorite, isFavorite } from "@/utils/favoriteUtils";
-
+import {
+  addFavorite,
+  getFavorites,
+  isFavorite,
+  removeFavorite,
+} from "@/utils/favoriteUtils";
+import { useFavorites } from "@/context/FavoritesContext";
 
 type Match = {
   fixture: {
     id: number;
     date: string;
-    status: { short: string; elapsed: number | null }; 
-  league: {
-    id: number;
-    name: string;
-    logo: string;
-  };
-  teams: {
-    home: { name: string; logo: string };
-    away: { name: string; logo: string };
-  };
-  goals: {
-    home: number;
-    away: number;
+    status: { short: string; elapsed: number | null };
+    league: {
+      id: number;
+      name: string;
+      logo: string;
+    };
+    teams: {
+      home: { name: string; logo: string };
+      away: { name: string; logo: string };
+    };
+    goals: {
+      home: number;
+      away: number;
+    };
   };
 };
-}
 
 const API_URL = "https://v3.football.api-sports.io/fixtures";
 const API_KEY = "b8b570d6f3ff7a8653dee3fb8922d929";
 
 export default function App() {
-  const [appReady, setAppReady] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setAppReady(true);
-    }, 5000);
-
-    return () => clearTimeout(timer);
-  }, []);
-  if (!appReady) {
-    return (
-      <View style={ {
-    flex: 1,
-  }}>
-        <Image
-          source={warasplash} 
-          style={{
-    flex: 1,
-     width: "100%",
-     height: "100%",
-  }}
-          resizeMode="cover"
-        />
-      </View>
-    );
-  }
-  
-  return (
- 
-      <AppContent />
- 
-  );
+  return <AppContent />;
 }
-
 
 const LiveBadge = () => {
   const pulse = useRef(new Animated.Value(1)).current;
@@ -114,7 +85,9 @@ const LiveBadge = () => {
         zIndex: 1,
       }}
     >
-      <Text style={{ color: "white", fontWeight: "bold", fontSize: 12 }}>LIVE</Text>
+      <Text style={{ color: "white", fontWeight: "bold", fontSize: 12 }}>
+        LIVE
+      </Text>
     </Animated.View>
   );
 };
@@ -123,7 +96,7 @@ export function AppContent() {
   const [selectedDate, setSelectedDate] = useState("");
   const [dates, setDates] = useState<{ label: string; value: string }[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
-  const [favorites, setFavorites] = useState(new Set<number>());
+  const { favorites, setFavorites, refreshFavorites } = useFavorites();
   const scrollX = useRef(new Animated.Value(0)).current;
   const { theme } = useContext(ThemeContext);
 
@@ -140,12 +113,33 @@ export function AppContent() {
       const day = nextDate.getDate().toString().padStart(2, "0");
       const month = (nextDate.getMonth() + 1).toString().padStart(2, "0");
       const dayLabel = daysOfWeek[nextDate.getDay()];
-      const formattedDate = nextDate.toLocaleDateString('fr-CA');
+      const formattedDate = nextDate.toLocaleDateString("fr-CA");
 
-      newDates.push({ label: `${dayLabel} ${day}-${month}`, value: formattedDate });
+      newDates.push({
+        label: `${dayLabel} ${day}-${month}`,
+        value: formattedDate,
+      });
     }
 
     return newDates;
+  };
+
+  const toggleFavorite = async (item: any, isFav: boolean) => {
+    try {
+      if (isFav) {
+        const response = await removeFavorite(item);
+        if (response) {
+          await refreshFavorites();
+        }
+      } else {
+        const response = await addFavorite(item);
+        if (response) {
+          await refreshFavorites();
+        }
+      }
+    } catch (error) {
+      console.error("Erreur lors de la modification des favoris:", error);
+    }
   };
 
   useEffect(() => {
@@ -154,187 +148,211 @@ export function AppContent() {
     setSelectedDate(getCurrentDate());
   }, []);
 
- useEffect(() => {
-  let interval: NodeJS.Timeout | null = null;
-  
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
 
-  const fetchMatches = async () => {
-  try {
-    const response = await fetch(`${API_URL}?date=${selectedDate}`, {
-      headers: {
-        "x-apisports-key": API_KEY,
-      },
-    });
+    const fetchMatches = async () => {
+      try {
+        const response = await fetch(`${API_URL}?date=${selectedDate}`, {
+          headers: {
+            "x-apisports-key": API_KEY,
+          },
+        });
 
-    const data = await response.json();
-    const allMatches = data.response || [];
+        const data = await response.json();
+        const allMatches = data.response || [];
 
-    const europeanLeagues = [
-        1, 2, 3, 4, 5, 6, 9, 11, 13, 14, 16, 17, 39, 40, 61, 62, 78,
-        88, 94, 98, 135, 136, 140, 143, 2000, 2001, 2002,
-        203, 253, 263, 264, 266, 292, 307, 848, 210, 30, 15, 858, 36, 34, 31, 894, 32, 239, 859, 38, 131, 141, 240, 1117];
+        const europeanLeagues = [
+          1, 2, 3, 4, 5, 6, 9, 11, 13, 14, 16, 17, 39, 40, 61, 62, 78, 88, 94,
+          98, 135, 136, 140, 143, 2000, 2001, 2002, 203, 253, 263, 264, 266,
+          292, 307, 848, 210, 30, 15, 858, 36, 34, 31, 894, 32, 239, 859, 38,
+          131, 141, 240, 1117,
+        ];
 
-      const europeanMatches = allMatches.filter((match: Match) =>
-      europeanLeagues.includes(match.league.id)
-    );
+        const europeanMatches = allMatches.filter((match: Match) =>
+          europeanLeagues.includes(match.league.id)
+        );
 
-    setMatches(europeanMatches);
-    setLoading(false);
-  } catch (error) {
-    console.error("Erreur lors de la récupération des matchs :", error);
-    setLoading(false);
-  }
-};
+        setMatches(europeanMatches);
+        setLoading(false);
+      } catch (error) {
+        console.error("Erreur lors de la récupération des matchs :", error);
+        setLoading(false);
+      }
+    };
 
-  fetchMatches();
+    fetchMatches();
 
-  if (selectedDate === getCurrentDate()) {
-    interval = setInterval(fetchMatches, 20000);
-  }
+    if (selectedDate === getCurrentDate()) {
+      interval = setInterval(fetchMatches, 20000);
+    }
 
-  return () => {
-    if (interval) clearInterval(interval);
-  };
-}, [selectedDate]);
-
-
-  const toggleFavorite = (matchId: number) => {
-    setFavorites((prev) => {
-      const newFav = new Set(prev);
-      newFav.has(matchId) ? newFav.delete(matchId) : newFav.add(matchId);
-      return newFav;
-    });
-  };
-
-  const isFavorite = (matchId: number) => favorites.has(matchId);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [selectedDate]);
 
   const now = new Date().getTime();
 
   const liveMatches = matches.filter((match) => {
-  const status = match.fixture.status.short;
-  return [
-     "1H", "2H", "ET", "P", "LIVE", "HT", "BT", "INT"
-  ].includes(status); 
-});
+    const status = match.fixture.status.short;
+    return ["1H", "2H", "ET", "P", "LIVE", "HT", "BT", "INT"].includes(status);
+  });
 
   const upcomingMatches = matches.filter((match) => {
-  const matchDate = new Date(match.fixture.date);
-  const matchTime = matchDate.getTime();
+    const matchDate = new Date(match.fixture.date);
+    const matchTime = matchDate.getTime();
 
-  const startOfDay = new Date(selectedDate + "T00:00:00").getTime();
-  const endOfDay = new Date(selectedDate + "T23:30:00").getTime();
+    const startOfDay = new Date(selectedDate + "T00:00:00").getTime();
+    const endOfDay = new Date(selectedDate + "T23:30:00").getTime();
+
+    return (
+      matchTime >= now &&
+      matchTime >= startOfDay &&
+      matchTime <= endOfDay &&
+      !["1H", "2H", "HT", "LIVE"].includes(match.fixture.status.short)
+    );
+  });
 
   return (
-    matchTime >= now &&
-    matchTime >= startOfDay &&
-    matchTime <= endOfDay &&
-    !["1H", "2H", "HT", "LIVE"].includes(match.fixture.status.short)
-  );
-});
-
-  return (
-  <SafeAreaView style={{ flex: 1,backgroundColor: "#121212"}}>
-  {
-  loading ? (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Text style={{ fontSize: 36, color: "#fff" }}>WARASCORE</Text>
-    </View>
-  ) : (
-    <View style={{ flex: 1, backgroundColor: "#121212" }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", padding: 0, backgroundColor: "#111" }}>
-        <Text style={[{ color: "white", fontSize: 30, marginLeft: 19, fontWeight: "900" }]}>WaraScore</Text>
-        <View style={{ flexDirection: "row", marginRight: 20, padding: 10 }}>
-          <TouchableOpacity onPress={() => router.push('/favoris')}>
-          <Ionicons name="notifications" size={24} color="#FFF" />
-         </TouchableOpacity>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#121212" }}>
+      {loading ? (
+        <View
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
+          <Text style={{ fontSize: 36, color: "#fff" }}>WARASCORE</Text>
         </View>
-      </View>
-      <View style={{ flex: 1, padding: 10 }}>
-        <View style={{ height: 40, width: "100%" }}>
-          <FlatList
-            data={dates}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.value}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                onPress={() => setSelectedDate(item.value)}
-                style={{
-                  width: 100,
-                  backgroundColor: item.value === selectedDate ? "#f33" : "#333",
-                  borderRadius: 10,
-                  padding: 10,
-                  marginLeft: 5,
-                  height: "100%",
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-              >
-                <Text style={{ color: "white", fontSize: 13, fontWeight: "600" }}>{item.label.split(" ")[0]}</Text>
-                <Text style={{ color: "white", fontSize: 13, fontWeight: "600" }}>{item.label.split(" ")[1]}</Text>
+      ) : (
+        <View style={{ flex: 1, backgroundColor: "#121212" }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              padding: 0,
+              backgroundColor: "#111",
+            }}
+          >
+            <Text
+              style={[
+                {
+                  color: "white",
+                  fontSize: 30,
+                  marginLeft: 19,
+                  fontWeight: "900",
+                },
+              ]}
+            >
+              WaraScore
+            </Text>
+            <View
+              style={{ flexDirection: "row", marginRight: 20, padding: 10 }}
+            >
+              <TouchableOpacity onPress={() => router.push("/favoris")}>
+                <Ionicons name="notifications" size={24} color="#FFF" />
               </TouchableOpacity>
+            </View>
+          </View>
+          <View style={{ flex: 1, padding: 10 }}>
+            <View style={{ height: 40, width: "100%" }}>
+              <FlatList
+                data={dates}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item.value}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    onPress={() => setSelectedDate(item.value)}
+                    style={{
+                      width: 100,
+                      backgroundColor:
+                        item.value === selectedDate ? "#f33" : "#333",
+                      borderRadius: 10,
+                      padding: 10,
+                      marginLeft: 5,
+                      height: "100%",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "white",
+                        fontSize: 13,
+                        fontWeight: "600",
+                      }}
+                    >
+                      {item.label.split(" ")[0]}
+                    </Text>
+                    <Text
+                      style={{
+                        color: "white",
+                        fontSize: 13,
+                        fontWeight: "600",
+                      }}
+                    >
+                      {item.label.split(" ")[1]}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              />
+            </View>
+
+            {liveMatches.length > 0 && (
+              <>
+                <Text style={styles.title2}>Live Now</Text>
+                <View>
+                  <FlatList
+                    data={liveMatches.slice(0, 4)}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    keyExtractor={(item) => item.fixture.id.toString()}
+                    renderItem={({ item }) => <LiveScore item={item} />}
+                  />
+                </View>
+              </>
             )}
-          />
-        </View>
 
-        {liveMatches.length > 0 && (
-          <>
-            <Text style={styles.title2}>Live Now</Text>
-            <View>
-
+            <Text style={[styles.title2, { marginTop: 20 }]}>
+              Prochains Matchs
+            </Text>
             <FlatList
-              data={liveMatches.slice(0, 4)} 
-              horizontal
-              showsHorizontalScrollIndicator={false}
+              data={upcomingMatches}
               keyExtractor={(item) => item.fixture.id.toString()}
-              renderItem={({ item }) => <LiveScore item={item} />}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <ScoreList item={item} onToggleFavorite={toggleFavorite} />
+              )}
+              ListEmptyComponent={() => (
+                <View
+                  style={{ width: "100%", alignItems: "center", padding: 10 }}
+                >
+                  <Text style={{ color: "#FFF" }}>Aucun match à venir</Text>
+                </View>
+              )}
             />
-            </View>
-
-          </>
-        )}
-
-        <Text style={[styles.title2, { marginTop: 20 }]}>Prochains Matchs</Text>
-        <FlatList
-          data={upcomingMatches}
-          keyExtractor={(item) => item.fixture.id.toString()}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <ScoreList
-              item={item}
-              onToggleFavorite={toggleFavorite}
-              isFavorite={isFavorite(item.fixture.id)}
-            />
-          )}
-          ListEmptyComponent={() => (
-            <View style={{ width: "100%", alignItems: "center", padding: 10 }}>
-              <Text style={{ color: "#FFF" }}>Aucun match à venir</Text>
-            </View>
-          )}
-        />
-      </View>
-    </View>
-  )
-  }
-  </SafeAreaView>)
-
+          </View>
+        </View>
+      )}
+    </SafeAreaView>
+  );
 }
 
 const teamNamesFR: Record<string, string> = {
-  "manchesterunited": "Manchester United",
-  "arsenal": "Arsenal",
-  "barcelona": "Barcelone",
-  "parissaintgermain": "Paris Saint-Germain",
-  "bayernmunich": "Bayern Munich",
-  "juventus": "Juventus",
-  "japan": "Japon",
-  "indonesia": "Indonésie"
+  manchesterunited: "Manchester United",
+  arsenal: "Arsenal",
+  barcelona: "Barcelone",
+  parissaintgermain: "Paris Saint-Germain",
+  bayernmunich: "Bayern Munich",
+  juventus: "Juventus",
+  japan: "Japon",
+  indonesia: "Indonésie",
 };
 
 function normalizeName(name: string) {
   return name
     .toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, "")
     .replace(/-/g, "");
 }
@@ -347,37 +365,41 @@ function translateTeamName(name: string): string {
 const LiveScore = ({ item }: { item: Match }) => {
   const router = useRouter();
   const handleDetailsPress = () => {
-  console.log("Match ID :", item.fixture.id);
-  router.push(`/MatchDetailsScreen/${item.fixture.id}`);
+    console.log("Match ID :", item.fixture.id);
+    router.push(`/MatchDetailsScreen/${item.fixture.id}`);
   };
 
   const elapsed = item.fixture.status.elapsed;
   const status = item.fixture.status.short;
 
   const displayTime =
-  status === "INT"
-    ? "Interruption"
-    : status === "P"
-    ? "Tirs au but"
-    : status === "HT"
-    ? "Mi-temps"
-    : status === "1H" && elapsed !== null
-    ? elapsed > 45
-      ? `45+${elapsed - 45}’`
-      : `${elapsed}’`
-    : status === "2H" && elapsed !== null
-    ? elapsed > 90
-      ? `90+${elapsed - 90}’`
-      : elapsed === 90
-      ? `90+’`
-      : `${elapsed}’`
-    : elapsed !== null
-    ? `${elapsed}’`
-    : "";
-    
-  
+    status === "INT"
+      ? "Interruption"
+      : status === "P"
+      ? "Tirs au but"
+      : status === "HT"
+      ? "Mi-temps"
+      : status === "1H" && elapsed !== null
+      ? elapsed > 45
+        ? `45+${elapsed - 45}’`
+        : `${elapsed}’`
+      : status === "2H" && elapsed !== null
+      ? elapsed > 90
+        ? `90+${elapsed - 90}’`
+        : elapsed === 90
+        ? `90+’`
+        : `${elapsed}’`
+      : elapsed !== null
+      ? `${elapsed}’`
+      : "";
+
   return (
-    <View style={[styles.card, { backgroundColor: "#222", borderColor: "#F73636", borderWidth: 1, }]}>
+    <View
+      style={[
+        styles.card,
+        { backgroundColor: "#222", borderColor: "#F73636", borderWidth: 1 },
+      ]}
+    >
       <View
         style={{
           flexDirection: "row",
@@ -388,17 +410,22 @@ const LiveScore = ({ item }: { item: Match }) => {
       >
         <Image
           source={{ uri: item.league.logo }}
-          style={{ width: 30, height: 30, resizeMode: "contain", marginRight: 8 }}
+          style={{
+            width: 30,
+            height: 30,
+            resizeMode: "contain",
+            marginRight: 8,
+          }}
         />
         <Text
           style={[
             styles.league,
             {
               textAlign: "left",
-              marginTop: 3, 
+              marginTop: 3,
             },
           ]}
-          numberOfLines={1} 
+          numberOfLines={1}
           ellipsizeMode="tail"
         >
           {item.league.name}
@@ -407,7 +434,10 @@ const LiveScore = ({ item }: { item: Match }) => {
 
       <View style={styles.liveScoreBlock}>
         <View style={styles.liveScoreBlockTeam}>
-          <Image source={{ uri: item.teams.home.logo }} style={styles.logoTop} />
+          <Image
+            source={{ uri: item.teams.home.logo }}
+            style={styles.logoTop}
+          />
           <Text numberOfLines={1} style={styles.scoreLiveTeamName}>
             {translateTeamName(item.teams.home.name)}
           </Text>
@@ -422,33 +452,49 @@ const LiveScore = ({ item }: { item: Match }) => {
             {item.goals.home} - {item.goals.away}
           </Text>
         </View>
-          
+
         <View style={styles.liveScoreBlockTeam}>
-          <Image source={{ uri: item.teams.away.logo }} style={styles.logoTop} />
+          <Image
+            source={{ uri: item.teams.away.logo }}
+            style={styles.logoTop}
+          />
           <Text numberOfLines={1} style={styles.scoreLiveTeamName}>
             {translateTeamName(item.teams.away.name)}
           </Text>
         </View>
       </View>
 
-      <TouchableOpacity onPress={handleDetailsPress} style={styles.detailsButton}>
+      <TouchableOpacity
+        onPress={handleDetailsPress}
+        style={styles.detailsButton}
+      >
         <Text style={styles.detailsButtonText}>Details</Text>
       </TouchableOpacity>
     </View>
   );
 };
 
-
-const ScoreList = ({ item, onToggleFavorite }: {
+const ScoreList = ({
+  item,
+  onToggleFavorite,
+}: {
   item: Match;
-  onToggleFavorite: (id: number) => void;
+  onToggleFavorite: (match: any, isFav: boolean) => void;
 }) => {
   const router = useRouter();
-  const time = new Date(item.fixture.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const { isFavorite } = useFavorites();
+  const time = new Date(item.fixture.date).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   const handlePress = () => {
-    router.push(`MatchDetailsScreen/MatchDetailsScreen/DetailsPro/${item.fixture.id}`);
+    router.push(
+      `MatchDetailsScreen/MatchDetailsScreen/DetailsPro/${item.fixture.id}`
+    );
   };
+
+  const isFav = isFavorite(item.fixture.id);
 
   return (
     <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
@@ -456,25 +502,50 @@ const ScoreList = ({ item, onToggleFavorite }: {
         <View style={styles.liveScoreBlock}>
           <View style={{ width: "10%" }}></View>
           <View style={{ width: "70%" }}>
-            <View style={{ flexDirection: "row", alignItems: "center", marginLeft: -40 }}>
-              <Image source={{ uri: item.teams.home.logo }} style={{ width: 30, height: 37 }} />
-              <Text numberOfLines={1} style={styles.teamName}>{item.teams.home.name}</Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                marginLeft: -40,
+              }}
+            >
+              <Image
+                source={{ uri: item.teams.home.logo }}
+                style={{ width: 30, height: 37 }}
+              />
+              <Text numberOfLines={1} style={styles.teamName}>
+                {item.teams.home.name}
+              </Text>
             </View>
-            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 18, marginLeft: -42 }}>
-              <Image source={{ uri: item.teams.away.logo }} style={{ width: 33, height: 37 }} />
-              <Text numberOfLines={1} style={styles.teamName}>{item.teams.away.name}</Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                marginTop: 18,
+                marginLeft: -42,
+              }}
+            >
+              <Image
+                source={{ uri: item.teams.away.logo }}
+                style={{ width: 33, height: 37 }}
+              />
+              <Text numberOfLines={1} style={styles.teamName}>
+                {item.teams.away.name}
+              </Text>
             </View>
           </View>
           <View style={{ width: "10%" }}>
-            <Text style={{ color: "#fff", marginTop: 2, marginLeft: -10 }}>{time}</Text>
+            <Text style={{ color: "#fff", marginTop: 2, marginLeft: -10 }}>
+              {time}
+            </Text>
             <TouchableOpacity
-              onPress={() => onToggleFavorite(item.fixture.id)}
+              onPress={() => onToggleFavorite(item, isFav)}
               style={{ marginTop: 20, marginLeft: -7 }}
             >
               <Ionicons
-                name={isFavorite(item.fixture.id) ? "notifications-circle" : "notifications-outline"}
+                name={isFav ? "notifications-circle" : "notifications-outline"}
                 size={30}
-                color={isFavorite(item.fixture.id) ? "#f33" : "#fff"}
+                color={isFav ? "#f33" : "#fff"}
               />
             </TouchableOpacity>
           </View>
@@ -486,16 +557,16 @@ const ScoreList = ({ item, onToggleFavorite }: {
 
 const { width } = Dimensions.get("window");
 const styles = StyleSheet.create({
-card: {
-  backgroundColor: "#222",
-  borderRadius: 12,
-  padding: 9, 
-  marginHorizontal: 10,
-  width: width * 0.8,
-  height: 210,
-  justifyContent: "flex-start",
-  paddingTop: 10,
-},
+  card: {
+    backgroundColor: "#222",
+    borderRadius: 12,
+    padding: 9,
+    marginHorizontal: 10,
+    width: width * 0.8,
+    height: 210,
+    justifyContent: "flex-start",
+    paddingTop: 10,
+  },
   card2: {
     backgroundColor: "#1E1E1E",
     borderRadius: 10,

@@ -1,71 +1,120 @@
-import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
   ActivityIndicator,
-  Image,
-  FlatList,
   Dimensions,
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
+  Image,
 } from "react-native";
+import React, { useEffect, useState } from "react";
 import { useLocalSearchParams, useNavigation } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { ScrollView } from "react-native";
-import TeamCompositionField from "../../../../components/TeamCompositionField";
-import MatchDetailsTabs from "@/components/MatchDetailsTabs";
+import TeamCompositionField from "./TeamCompositionField";
+
+interface Team {
+  id: number;
+  name: string;
+  logo: string;
+}
+
+interface Fixture {
+  id: number;
+  date: string;
+  venue: {
+    name: string;
+    city: string;
+  };
+}
+
+interface MatchDetails {
+  fixture: Fixture;
+  teams: {
+    home: Team;
+    away: Team;
+  };
+  league: {
+    id: number;
+    season: number;
+    name: string;
+  };
+  goals: {
+    home: number | null;
+    away: number | null;
+  };
+  broadcast?: Array<{
+    name: string;
+  }>;
+}
+
+interface Player {
+  player: {
+    id: number;
+    name: string;
+  };
+  team: Team;
+}
+
+interface TeamLineup {
+  team: Team;
+  startXI: Player[];
+}
+
+interface StandingTeam {
+  team: Team;
+  points: number;
+  fixture?: Fixture;
+  goals?: {
+    home: number | null;
+    away: number | null;
+  };
+  teams?: {
+    home: Team;
+    away: Team;
+  };
+  league?: {
+    name: string;
+  };
+}
+
+interface TeamCompositionFieldProps {
+  team: Array<{
+    side: string;
+    player: {
+      id: number;
+      name: string;
+    };
+    team: Team;
+  }>;
+  isMerged: boolean;
+}
 
 const API_URL = "https://v3.football.api-sports.io";
 const API_KEY = "b8b570d6f3ff7a8653dee3fb8922d929";
 
 const windowWidth = Dimensions.get("window").width;
 
-export default function DetailsPro() {
-  const { id }: { id: string } = useLocalSearchParams();
+export default function MatchDetailsTabs({ id }: { id: string }) {
   const navigation = useNavigation();
 
-  const [matchDetails, setMatchDetails] = useState(null);
+  const [matchDetails, setMatchDetails] = useState<MatchDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("details");
 
-  const [composition, setComposition] = useState({ home: [], away: [] });
+  const [composition, setComposition] = useState<{
+    home: Player[];
+    away: Player[];
+  }>({ home: [], away: [] });
   const [compositionLoading, setCompositionLoading] = useState(true);
 
-  const [classement, setClassement] = useState(null);
+  const [classement, setClassement] = useState<StandingTeam[] | null>(null);
   const [classementLoading, setClassementLoading] = useState(true);
   const [classementError, setClassementError] = useState(false);
 
-  const [historique, setHistorique] = useState([]);
+  const [historique, setHistorique] = useState<MatchDetails[]>([]);
   const [historiqueLoading, setHistoriqueLoading] = useState(false);
   const [historiqueError, setHistoriqueError] = useState(false);
-
-  useEffect(() => {
-    navigation.setOptions({
-      headerTitle: "",
-      headerTitleAlign: "center",
-      headerStyle: { backgroundColor: "#121212" },
-      headerTitleStyle: { color: "white", fontWeight: "bold", fontSize: 18 },
-      headerLeft: () => (
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{ marginLeft: 10 }}
-        >
-          <Ionicons name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
-      ),
-      headerRight: () => (
-        <TouchableOpacity
-          onPress={() => {
-            console.log("Match ajouté aux favoris ou notification activée");
-          }}
-          style={{ marginRight: 10 }}
-        >
-          <Ionicons name="notifications-outline" size={24} color="white" />
-        </TouchableOpacity>
-      ),
-      headerShown: true,
-    });
-  }, [navigation]);
 
   useEffect(() => {
     const fetchMatchDetails = async () => {
@@ -100,10 +149,10 @@ export default function DetailsPro() {
           setComposition({ home: [], away: [] });
         } else {
           const homeTeam = data.response.find(
-            (team) => team.team.id === matchDetails.teams.home.id
+            (team: TeamLineup) => team.team.id === matchDetails.teams.home.id
           );
           const awayTeam = data.response.find(
-            (team) => team.team.id === matchDetails.teams.away.id
+            (team: TeamLineup) => team.team.id === matchDetails.teams.away.id
           );
 
           setComposition({
@@ -142,9 +191,15 @@ export default function DetailsPro() {
         } else {
           const now = new Date();
           const pastMatches = data.response
-            .filter((match) => new Date(match.fixture.date) < now)
-            .sort(
-              (a, b) => new Date(b.fixture.date) - new Date(a.fixture.date)
+            .filter(
+              (match: MatchDetails) =>
+                match.fixture && new Date(match.fixture.date) < now
+            )
+            .sort((a: MatchDetails, b: MatchDetails) =>
+              a.fixture && b.fixture
+                ? new Date(b.fixture.date).getTime() -
+                  new Date(a.fixture.date).getTime()
+                : 0
             );
 
           if (pastMatches.length === 0) {
@@ -195,9 +250,10 @@ export default function DetailsPro() {
             const homeId = matchDetails.teams.home.id;
             const awayId = matchDetails.teams.away.id;
 
-            const relevantGroup = standingsData.find((group) =>
+            const relevantGroup = standingsData.find((group: StandingTeam[]) =>
               group.some(
-                (team) => team.team.id === homeId || team.team.id === awayId
+                (team: StandingTeam) =>
+                  team.team.id === homeId || team.team.id === awayId
               )
             );
 
@@ -220,27 +276,14 @@ export default function DetailsPro() {
 
     fetchClassement();
   }, [matchDetails]);
+  const venue = matchDetails?.fixture.venue;
+  const broadcasters = matchDetails?.broadcast;
 
-  if (loading || !matchDetails) {
-    return (
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.tabsContainer}
-      >
-        {/* onglets */}
-      </ScrollView>
-    );
-  }
-
-  const venue = matchDetails.fixture.venue;
-  const broadcasters = matchDetails.broadcast;
+  if (!id) return null;
 
   return (
-    <View style={styles.container}>
-      <MatchCard fixture={matchDetails} events={[]} />
-
-      {/* Onglets
+    <>
+      {/* Onglets */}
       <View style={styles.tabsContainer}>
         <TouchableOpacity
           style={[
@@ -312,17 +355,17 @@ export default function DetailsPro() {
           </Text>
         </TouchableOpacity>
       </View>
-
       <View style={{ flex: 1 }}>
         {activeTab === "details" && (
           <View>
             <Text style={styles.heading}>Détails du Match</Text>
             <Text style={styles.info}>
-              Stade : {venue.name}, {venue.city}
+              Stade : {venue?.name}, {venue?.city}
             </Text>
             {broadcasters && broadcasters.length > 0 ? (
               <Text style={styles.info}>
-                Chaîne : {broadcasters.map((b) => b.name).join(", ")}
+                Chaîne :{" "}
+                {broadcasters.map((b: { name: string }) => b.name).join(", ")}
               </Text>
             ) : (
               <Text style={styles.info}>Chaîne : Non disponible</Text>
@@ -357,12 +400,14 @@ export default function DetailsPro() {
                 <TeamCompositionField
                   team={[
                     ...composition.home.map((player) => ({
-                      ...player,
                       side: "home",
+                      player: player.player,
+                      team: player.team,
                     })),
                     ...composition.away.map((player) => ({
-                      ...player,
                       side: "away",
+                      player: player.player,
+                      team: player.team,
                     })),
                   ]}
                   isMerged={true}
@@ -461,81 +506,10 @@ export default function DetailsPro() {
               )}
             />
           ))}
-      </View>*/}
-      <MatchDetailsTabs id={id} />
-    </View>
+      </View>
+    </>
   );
 }
-
-const MatchCard = ({ fixture, events }) => {
-  const { teams, goals, league, fixture: fix } = fixture;
-
-  const matchDate = new Date(fix.date);
-  const formattedDate = matchDate.toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-  const formattedTime = matchDate.toLocaleTimeString("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: "#222",
-          height: 185,
-          borderColor: "#F73636",
-          borderWidth: 1,
-        },
-      ]}
-    >
-      <Text style={styles.league}>{league.name}</Text>
-
-      <View style={styles.timeContainer}>
-        <Text style={styles.timeText}>
-          {formattedDate} à {formattedTime}
-        </Text>
-      </View>
-
-      <View style={styles.teamsRow}>
-        <View style={styles.teamContainer}>
-          <Image source={{ uri: teams.home.logo }} style={styles.teamLogo} />
-          <Text style={styles.teamName}>{teams.home.name}</Text>
-        </View>
-
-        <View style={styles.scoreContainer}>
-          <Text style={styles.score}>
-            {fix.status.short === "NS" ? "" : goals.home}
-          </Text>
-          <Text style={styles.scoreSeparator}> - </Text>
-          <Text style={styles.score}>
-            {fix.status.short === "NS" ? "" : goals.away}
-          </Text>
-        </View>
-
-        <View style={styles.teamContainer}>
-          <Image source={{ uri: teams.away.logo }} style={styles.teamLogo} />
-          <Text style={styles.teamName}>{teams.away.name}</Text>
-        </View>
-      </View>
-
-      <View style={{ marginTop: 10 }}>
-        {events
-          .filter((e) => e.type === "Goal")
-          .map((event, index) => (
-            <Text key={index} style={styles.goalEvent}>
-              ⚽ {event.player.name} - {event.time.elapsed}'
-              {event.assist ? ` (Passeur: ${event.assist.name})` : ""}
-            </Text>
-          ))}
-      </View>
-    </View>
-  );
-};
 
 const styles = StyleSheet.create({
   container: {
@@ -637,10 +611,6 @@ const styles = StyleSheet.create({
     color: "#aaa",
     fontWeight: "600",
     fontSize: 16,
-  },
-  tabButton: {
-    paddingVertical: 10,
-    marginHorizontal: 0,
   },
   activeTabText: {
     color: "#aaa",

@@ -1,14 +1,17 @@
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useLayoutEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
-const WaraScoreScreen = () => {
+const ArticleScreen = () => {
+  const { url }: { url: string } = useLocalSearchParams();
   const navigation = useNavigation();
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerTitle: "Mes pronos",
+      headerTitle: "",
       headerTitleAlign: "center",
       headerStyle: {
         backgroundColor: "#121212",
@@ -19,7 +22,7 @@ const WaraScoreScreen = () => {
         fontSize: 18,
       },
       headerLeft: () => (
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 10 }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 10 }}>
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
       ),
@@ -28,28 +31,22 @@ const WaraScoreScreen = () => {
   }, [navigation]);
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContainer} style={styles.container}>
-    <Text style={styles.text}>Pas encore de pronostics à afficher !</Text>
-   </ScrollView>
+    <View style={styles.container}>
+      <WebView
+        source={{ uri: url }}
+        startInLoadingState={true}
+        renderLoading={() => (
+          <ActivityIndicator size="large" color="#1e90ff" style={{ flex: 1 }} />
+        )}
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
-    padding: 16,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: 'flex-start',   
-    alignItems: 'center',
-   },
-  text: {
-    color: 'white',
-    fontSize: 16,
   },
 });
 
-export default WaraScoreScreen;
-
+export default ArticleScreen;

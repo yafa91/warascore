@@ -38,18 +38,18 @@ export default function SettingsScreen() {
 </TouchableOpacity>
 
 {/* Pronos */}
-<Text style={styles.sectionTitle}>Mes pronostics</Text>
-<TouchableOpacity onPress={() => router.push('/paramater/prono')} style={styles.row}>
-  <MaterialCommunityIcons name="format-list-checks" size={22} color="white" />
-  <Text style={styles.label}>Voir mes pronos</Text>
-  <Ionicons name="chevron-forward" size={20} color="gray" />
-</TouchableOpacity>
-
-{/* Lien rapide */}
 <Text style={styles.sectionTitle}>Lien rapide</Text>
 <TouchableOpacity onPress={() => router.push('/paramater/programmeTV')} style={styles.row}>
   <MaterialCommunityIcons name="television-classic" size={22} color="white" />
   <Text style={styles.label}>Programme TV</Text>
+  <Ionicons name="chevron-forward" size={20} color="gray" />
+</TouchableOpacity>
+
+{/* Lien rapide */}
+<Text style={styles.sectionTitle}>Support</Text>
+<TouchableOpacity onPress={() => router.push('/paramater/avis')} style={styles.row}>
+  <MaterialCommunityIcons name="tooltip-text" size={22} color="white" />
+  <Text style={styles.label}>Votre avis nous interesse</Text>
   <Ionicons name="chevron-forward" size={20} color="gray" />
 </TouchableOpacity>
     </View>

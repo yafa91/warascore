@@ -1,9 +1,9 @@
-
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Feather from '@expo/vector-icons/Feather';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AntDesign from '@expo/vector-icons/AntDesign';
+import { View, Text } from 'react-native';
 
 const TabsNavigation = () => {
 	return (
@@ -65,6 +65,32 @@ const TabsNavigation = () => {
 				}}
 			/>
 			<Tabs.Screen
+				name="news"
+				options={{
+					title: 'News',
+					tabBarIcon: ({ focused, color }) => (
+						<View style={{ position: 'relative' }}>
+							<Ionicons
+								name={'newspaper-sharp'}
+								size={24}
+								color={color}
+							/>
+							<View style={{
+								position: 'absolute',
+								top: -6,
+								left: -12,
+								backgroundColor: 'red',
+								paddingHorizontal: 4,
+								paddingVertical: 1,
+								borderRadius: 4,
+							}}>
+								<Text style={{ color: 'white', fontSize: 8, fontWeight: 'bold' }}>BETA</Text>
+							</View>
+						</View>
+					),
+				}}
+			/>
+			<Tabs.Screen
 				name="profil"
 				options={{
 					title: 'Profil',
@@ -82,4 +108,3 @@ const TabsNavigation = () => {
 };
 
 export default TabsNavigation;
-

@@ -5,7 +5,12 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { getFavorites } from "@/utils/favoriteUtils";
+import {
+  getFavorites,
+  saveFavorites,
+  removeFavorite as removeFavoriteUtil,
+  removeFinishedMatchesFromFavorites,
+} from "@/utils/favoriteUtils";
 
 type FavoritesContextType = {
   favorites: any[];
@@ -13,17 +18,14 @@ type FavoritesContextType = {
   refreshFavorites: () => Promise<void>;
   isFavorite: (matchId: number) => boolean;
   toggleFavorite: (match: any) => Promise<void>;
+  removeFavorite: (matchId: number) => Promise<void>;
 };
 
 const FavoritesContext = createContext<FavoritesContextType | undefined>(
   undefined
 );
 
-export const FavoritesProvider = ({
-  children,
-}: {
-  children: React.ReactNode;
-}) => {
+export const FavoritesProvider = ({ children }: { children: React.ReactNode }) => {
   const [favorites, setFavorites] = useState<any[]>([]);
 
   const refreshFavorites = useCallback(async () => {
@@ -31,7 +33,7 @@ export const FavoritesProvider = ({
       const allFavorites = await getFavorites();
       setFavorites(allFavorites);
     } catch (error) {
-      console.error("Erreur lors du chargement des favoris:", error);
+      console.error("❌ Erreur lors du chargement des favoris:", error);
       setFavorites([]);
     }
   }, []);
@@ -46,25 +48,46 @@ export const FavoritesProvider = ({
   const toggleFavorite = useCallback(
     async (match: any) => {
       try {
-        const isFav = isFavorite(match.fixture.id);
-        if (isFav) {
-          const updatedFavorites = favorites.filter(
-            (fav) => fav.fixture.id !== match.fixture.id
-          );
-          setFavorites(updatedFavorites);
+        const matchId = match.fixture.id;
+        const alreadyFav = isFavorite(matchId);
+
+        let updatedFavorites;
+        if (alreadyFav) {
+          updatedFavorites = favorites.filter((f) => f.fixture.id !== matchId);
         } else {
-          setFavorites([...favorites, match]);
+          updatedFavorites = [...favorites, match];
         }
-        await refreshFavorites();
+
+        setFavorites(updatedFavorites);
+        await saveFavorites(updatedFavorites);
       } catch (error) {
-        console.error("Erreur lors de la modification des favoris:", error);
+        console.error("❌ Erreur lors du toggle du favori:", error);
       }
     },
-    [favorites, isFavorite, refreshFavorites]
+    [favorites, isFavorite]
   );
 
+ const removeFavorite = useCallback(
+  async (matchId: number) => {
+    try {
+      const updatedFavorites = favorites.filter(
+        (fav) => fav.fixture.id !== matchId
+      );
+      setFavorites(updatedFavorites); 
+      await saveFavorites(updatedFavorites); 
+    } catch (error) {
+      console.error("❌ Erreur lors de la suppression du favori:", error);
+    }
+  },
+  [favorites]
+);
+
   useEffect(() => {
-    refreshFavorites();
+    const init = async () => {
+      await removeFinishedMatchesFromFavorites();
+      await refreshFavorites();
+    };
+    init();
   }, [refreshFavorites]);
 
   return (
@@ -75,6 +98,7 @@ export const FavoritesProvider = ({
         refreshFavorites,
         isFavorite,
         toggleFavorite,
+        removeFavorite,
       }}
     >
       {children}
@@ -84,7 +108,7 @@ export const FavoritesProvider = ({
 
 export const useFavorites = () => {
   const context = useContext(FavoritesContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useFavorites must be used within a FavoritesProvider");
   }
   return context;

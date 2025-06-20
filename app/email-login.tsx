@@ -1,5 +1,15 @@
 import React, { useState, useLayoutEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -37,7 +47,7 @@ export default function EmailLogin() {
       return;
     }
     Alert.alert('Succès', `Bienvenue ${email}`);
-    router.replace('/'); // Redirection vers l'accueil
+    router.replace('/');
   };
 
   const handleForgotPassword = () => {
@@ -45,10 +55,7 @@ export default function EmailLogin() {
       'Mot de passe oublié',
       'Veuillez entrer votre adresse e-mail pour recevoir un lien de réinitialisation.',
       [
-        {
-          text: 'Annuler',
-          style: 'cancel',
-        },
+        { text: 'Annuler', style: 'cancel' },
         {
           text: 'Envoyer',
           onPress: (emailInput) => {
@@ -56,7 +63,6 @@ export default function EmailLogin() {
               Alert.alert('Erreur', 'Veuillez entrer une adresse e-mail valide.');
               return;
             }
-            // Ici tu peux appeler ta fonction pour envoyer le mail de réinitialisation
             Alert.alert('Succès', `Un lien de réinitialisation a été envoyé à ${emailInput}.`);
           },
         },
@@ -67,53 +73,59 @@ export default function EmailLogin() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Connexion par e-mail</Text>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: '#000' }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+        <Text style={styles.title}>Connexion par e-mail</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Adresse e-mail"
-        placeholderTextColor="#aaa"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        value={email}
-        onChangeText={setEmail}
-      />
+        <TextInput
+          style={styles.input}
+          placeholder="Adresse e-mail"
+          placeholderTextColor="#aaa"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          value={email}
+          onChangeText={setEmail}
+        />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Mot de passe"
-        placeholderTextColor="#aaa"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
+        <TextInput
+          style={styles.input}
+          placeholder="Mot de passe"
+          placeholderTextColor="#aaa"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Se connecter</Text>
-      </TouchableOpacity>
-
-      <View style={styles.signupWrapper}>
-        <Text style={styles.noAccountText}>Pas de compte ? </Text>
-        <TouchableOpacity onPress={() => router.push('/signup')}>
-          <Text style={styles.signUpText}>S'inscrire</Text>
+        <TouchableOpacity style={styles.button} onPress={handleLogin}>
+          <Text style={styles.buttonText}>Se connecter</Text>
         </TouchableOpacity>
-      </View>
 
-      <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotPasswordWrapper}>
-        <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
-      </TouchableOpacity>
-    </View>
+        <View style={styles.signupWrapper}>
+          <Text style={styles.noAccountText}>Pas de compte ? </Text>
+          <TouchableOpacity onPress={() => router.push('/signup')}>
+            <Text style={styles.signUpText}>S'inscrire</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotPasswordWrapper}>
+          <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
+  scrollContainer: {
+    flexGrow: 1,
+    alignItems: 'center',
     paddingHorizontal: 20,
-    justifyContent: 'center',
-    alignItems: 'center',  
+    paddingTop: 130,
+    paddingBottom: 30,
+    backgroundColor: '#000',
   },
   title: {
     fontSize: 24,
@@ -145,7 +157,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   signupWrapper: {
-    flexDirection: 'row',        
+    flexDirection: 'row',
     marginTop: 15,
     justifyContent: 'center',
     alignItems: 'center',

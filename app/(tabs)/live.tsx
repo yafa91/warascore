@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/Feather";
+import { router } from "expo-router";
+import * as Notifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -64,7 +67,7 @@ const leagues = [
 const leagueIdsToInclude = [
   1, 2, 3, 4, 5, 6, 9, 11, 13, 14, 16, 17, 39, 40, 61, 62, 78, 88, 94, 98, 135,
   136, 140, 143, 2000, 2001, 2002, 98, 307, 203, 253, 263, 264, 266, 292, 307,
-  848, 210, 30, 15, 858, 36, 34, 31, 894, 32, 239, 859, 38, 131, 141, 240,
+  848, 210, 30, 15, 858, 36, 34, 31, 894, 32, 239, 859, 38, 131, 141, 240, 329, 186
 ];
 
 export default function LivePage() {
@@ -75,6 +78,11 @@ export default function LivePage() {
   const [viewMode, setViewMode] = useState("live");
   const [selectedLeagueId, setSelectedLeagueId] = useState(null);
   const { favorites, setFavorites, refreshFavorites } = useFavorites();
+
+
+useEffect(() => {
+  Notifications.requestPermissionsAsync();
+}, []);
 
   useEffect(() => {
     Animated.loop(
@@ -99,23 +107,78 @@ export default function LivePage() {
     return () => clearInterval(interval);
   }, [viewMode, selectedLeagueId]);
 
-  const toggleFavorite = async (item: any, isFav: boolean) => {
+ const toggleFavorite = async (item: any, isFav: boolean) => {
+  try {
+    if (isFav) {
+      setFavorites((prev) =>
+       prev.filter((fav) => fav.fixture.id !== item.fixture.id)
+      );
+      await removeFavorite(item);
+    } else {
+      setFavorites((prev) => [...prev, item]);
+      await addFavorite(item);
+    }
+  } catch (error) {
+    console.error("Erreur lors de la modification des favoris:", error);
+  }
+};
+
+const scoresRef = useRef({});
+
+useEffect(() => {
+  const interval = setInterval(async () => {
     try {
-      if (isFav) {
-        const response = await removeFavorite(item);
-        if (response) {
-          await refreshFavorites();
+      const matchNotificationSetting = await AsyncStorage.getItem('matchNotification');
+      if (matchNotificationSetting !== 'true') return;
+
+      const liveMatches = await fetchLiveMatches();
+
+      for (let match of liveMatches) {
+        const matchId = match.fixture.id;
+        const currentScore = {
+          home: match.goals.home,
+          away: match.goals.away,
+        };
+
+        const prev = scoresRef.current[matchId];
+        initializedRef.current = true
+
+        if (
+          prev &&
+          (currentScore.home !== prev.home || currentScore.away !== prev.away)
+        ) {
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: "⚽ But marqué !",
+              body: `${match.teams.home.name} ${currentScore.home} - ${currentScore.away} ${match.teams.away.name}`,
+            },
+            trigger: null,
+          });
         }
-      } else {
-        const response = await addFavorite(item);
-        if (response) {
-          await refreshFavorites();
-        }
+
+  
+        scoresRef.current[matchId] = currentScore;
       }
     } catch (error) {
-      console.error("Erreur lors de la modification des favoris:", error);
+      console.error("Erreur dans la notification de but:", error);
     }
-  };
+  }, 20000);
+
+  return () => clearInterval(interval);
+}, []);
+
+  const fetchLiveMatches = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}?live=all`, {
+      headers: { "x-apisports-key": API_KEY },
+    });
+    const data = await response.json();
+    return data.response; 
+  } catch (error) {
+    console.error("Erreur lors du fetch des matchs live:", error);
+    return [];
+  }
+};
 
   const fetchMatches = async () => {
     setLoading(true);
@@ -167,6 +230,8 @@ export default function LivePage() {
     }
   };
 
+  
+
   const renderItem = ({ item }) => {
     const { fixture, teams, goals, league } = item;
     const elapsed = fixture.status.elapsed;
@@ -177,12 +242,9 @@ export default function LivePage() {
       <TouchableOpacity
         style={styles.matchCard}
         onPress={() =>
-          navigation.navigate(
-            `MatchDetailsScreen/MatchDetailsScreen/${item.fixture.id}`,
-            {
-              matchId: item.fixture.id,
-            }
-          )
+       {
+        router.push(`/MatchDetailsScreen/${item.fixture.id}`);
+       }
         }
         activeOpacity={0.8}
       >
@@ -210,19 +272,20 @@ export default function LivePage() {
 
           <View style={styles.centerBlock}>
             <Text style={styles.time}>
-              {fixture.status.short === "HT"
-                ? "Mi-temps"
-                : fixture.status.short === "FT"
-                ? "Terminé"
-                : fixture.status.short === "1H" && fixture.status.elapsed === 45
-                ? "45'+"
-                : fixture.status.short === "2H" && fixture.status.elapsed === 90
-                ? "90'+"
-                : fixture.status.elapsed !== null
-                ? `${fixture.status.elapsed}'`
-                : fixture.status.short}
-            </Text>
-
+  {fixture.status.short === "HT"
+    ? "Mi-temps"
+    : fixture.status.short === "FT"
+    ? "Terminé"
+    : fixture.status.short === "INT"
+    ? "Interrompu"
+    : fixture.status.short === "1H" && fixture.status.elapsed === 45
+    ? "45'+"
+    : fixture.status.short === "2H" && fixture.status.elapsed === 90
+    ? "90'+"
+    : fixture.status.elapsed !== null
+    ? `${fixture.status.elapsed}'`
+    : fixture.status.short}
+</Text>
             <Text style={styles.score}>
               {goals.home} - {goals.away}
             </Text>
@@ -425,8 +488,9 @@ const styles = StyleSheet.create({
   },
   score: {
     color: "#FFFFFF",
-    fontSize: 19,
+    fontSize: 20,
     fontWeight: "bold",
+    marginBottom: 10,
   },
   list: {
     paddingBottom: 20,

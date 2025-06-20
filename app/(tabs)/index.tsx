@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef, useContext } from "react";
 import { Dimensions, Easing } from "react-native";
+import { removeFinishedMatchesFromFavorites } from "@/utils/favoriteUtils";
+import { FavoritesProvider } from "@/context/FavoritesContext";
 import {
   View,
   Text,
@@ -47,12 +49,17 @@ const API_URL = "https://v3.football.api-sports.io/fixtures";
 const API_KEY = "b8b570d6f3ff7a8653dee3fb8922d929";
 
 export default function App() {
-  return <AppContent />;
+  return (
+    <FavoritesProvider>
+      <AppContent />
+    </FavoritesProvider>
+  );
 }
+
 
 const LiveBadge = () => {
   const pulse = useRef(new Animated.Value(1)).current;
-
+ 
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
@@ -91,6 +98,7 @@ const LiveBadge = () => {
     </Animated.View>
   );
 };
+
 export function AppContent() {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState("");
@@ -98,7 +106,12 @@ export function AppContent() {
   const [matches, setMatches] = useState<Match[]>([]);
   const { favorites, setFavorites, refreshFavorites } = useFavorites();
   const scrollX = useRef(new Animated.Value(0)).current;
-  const { theme } = useContext(ThemeContext);
+
+  useEffect(() => {
+  removeFinishedMatchesFromFavorites();
+}, []);
+   
+
 
   const getCurrentDate = () => new Date().toISOString().split("T")[0];
 
@@ -151,22 +164,26 @@ export function AppContent() {
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
-    const fetchMatches = async () => {
-      try {
-        const response = await fetch(`${API_URL}?date=${selectedDate}`, {
-          headers: {
-            "x-apisports-key": API_KEY,
-          },
-        });
+     const fetchMatches = async () => {
+  try {
+    const response = await fetch(`${API_URL}?date=${selectedDate}`, {
+      headers: { "x-apisports-key": API_KEY },
+    });
 
-        const data = await response.json();
+    if (!response.ok) {
+      console.warn("API response not OK:", response.status);
+      setMatches([]);
+      setLoading(false);
+      return;
+    }
+    const data = await response.json();
         const allMatches = data.response || [];
 
         const europeanLeagues = [
           1, 2, 3, 4, 5, 6, 9, 11, 13, 14, 16, 17, 39, 40, 61, 62, 78, 88, 94,
           98, 135, 136, 140, 143, 2000, 2001, 2002, 203, 253, 263, 264, 266,
           292, 307, 848, 210, 30, 15, 858, 36, 34, 31, 894, 32, 239, 859, 38,
-          131, 141, 240, 1117,
+          131, 141, 240, 329, 186
         ];
 
         const europeanMatches = allMatches.filter((match: Match) =>
@@ -196,7 +213,7 @@ export function AppContent() {
 
   const liveMatches = matches.filter((match) => {
     const status = match.fixture.status.short;
-    return ["1H", "2H", "ET", "P", "LIVE", "HT", "BT", "INT"].includes(status);
+    return ["1H", "2H", "ET", "P", "LIVE", "HT", "BT", "INT",].includes(status);
   });
 
   const upcomingMatches = matches.filter((match) => {
@@ -205,7 +222,8 @@ export function AppContent() {
 
     const startOfDay = new Date(selectedDate + "T00:00:00").getTime();
     const endOfDay = new Date(selectedDate + "T23:30:00").getTime();
-
+     
+    
     return (
       matchTime >= now &&
       matchTime >= startOfDay &&
@@ -213,14 +231,12 @@ export function AppContent() {
       !["1H", "2H", "HT", "LIVE"].includes(match.fixture.status.short)
     );
   });
-
-  return (
+  
+ return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#121212" }}>
       {loading ? (
-        <View
-          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-        >
-          <Text style={{ fontSize: 36, color: "#fff" }}>WARASCORE</Text>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <Text style={{ fontSize: 36, color: "#fff" }}></Text>
         </View>
       ) : (
         <View style={{ flex: 1, backgroundColor: "#121212" }}>
@@ -233,25 +249,22 @@ export function AppContent() {
             }}
           >
             <Text
-              style={[
-                {
-                  color: "white",
-                  fontSize: 30,
-                  marginLeft: 19,
-                  fontWeight: "900",
-                },
-              ]}
+              style={{
+                color: "white",
+                fontSize: 30,
+                marginLeft: 19,
+                fontWeight: "900",
+              }}
             >
               WaraScore
             </Text>
-            <View
-              style={{ flexDirection: "row", marginRight: 20, padding: 10 }}
-            >
+            <View style={{ flexDirection: "row", marginRight: 20, padding: 10 }}>
               <TouchableOpacity onPress={() => router.push("/favoris")}>
                 <Ionicons name="notifications" size={24} color="#FFF" />
               </TouchableOpacity>
             </View>
           </View>
+
           <View style={{ flex: 1, padding: 10 }}>
             <View style={{ height: 40, width: "100%" }}>
               <FlatList
@@ -264,8 +277,7 @@ export function AppContent() {
                     onPress={() => setSelectedDate(item.value)}
                     style={{
                       width: 100,
-                      backgroundColor:
-                        item.value === selectedDate ? "#f33" : "#333",
+                      backgroundColor: item.value === selectedDate ? "#f33" : "#333",
                       borderRadius: 10,
                       padding: 10,
                       marginLeft: 5,
@@ -274,22 +286,10 @@ export function AppContent() {
                       alignItems: "center",
                     }}
                   >
-                    <Text
-                      style={{
-                        color: "white",
-                        fontSize: 13,
-                        fontWeight: "600",
-                      }}
-                    >
+                    <Text style={{ color: "white", fontSize: 13, fontWeight: "600" }}>
                       {item.label.split(" ")[0]}
                     </Text>
-                    <Text
-                      style={{
-                        color: "white",
-                        fontSize: 13,
-                        fontWeight: "600",
-                      }}
-                    >
+                    <Text style={{ color: "white", fontSize: 13, fontWeight: "600" }}>
                       {item.label.split(" ")[1]}
                     </Text>
                   </TouchableOpacity>
@@ -312,9 +312,7 @@ export function AppContent() {
               </>
             )}
 
-            <Text style={[styles.title2, { marginTop: 20 }]}>
-              Prochains Matchs
-            </Text>
+            <Text style={[styles.title2, { marginTop: 20 }]}>Prochains Matchs</Text>
             <FlatList
               data={upcomingMatches}
               keyExtractor={(item) => item.fixture.id.toString()}
@@ -323,10 +321,8 @@ export function AppContent() {
                 <ScoreList item={item} onToggleFavorite={toggleFavorite} />
               )}
               ListEmptyComponent={() => (
-                <View
-                  style={{ width: "100%", alignItems: "center", padding: 10 }}
-                >
-                  <Text style={{ color: "#FFF" }}>Aucun match à venir</Text>
+                <View style={{ width: "100%", alignItems: "center", padding: 10 }}>
+                  <Text style={{color: "#FFF", fontStyle: "italic"}}>Aucun match à venir</Text>
                 </View>
               )}
             />
@@ -540,7 +536,7 @@ const ScoreList = ({
             </Text>
             <TouchableOpacity
               onPress={() => onToggleFavorite(item, isFav)}
-              style={{ marginTop: 20, marginLeft: -7 }}
+              style={{ marginTop: 19, marginLeft: -7 }}
             >
               <Ionicons
                 name={isFav ? "notifications-circle" : "notifications-outline"}
@@ -560,7 +556,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#222",
     borderRadius: 12,
-    padding: 9,
+    padding: 0,
     marginHorizontal: 10,
     width: width * 0.8,
     height: 210,
@@ -607,6 +603,7 @@ const styles = StyleSheet.create({
   logoTop: {
     width: 28,
     height: 28,
+  
   },
   scoreLiveTeamName: {
     fontSize: 18,

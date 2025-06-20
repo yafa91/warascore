@@ -165,6 +165,37 @@ export default function DetailsPro() {
     fetchHistorique();
   }, [matchDetails]);
 
+  const [events, setEvents] = useState([]);
+const [eventsLoading, setEventsLoading] = useState(true);
+
+useEffect(() => {
+  if (!matchDetails) return;
+
+  const fetchEvents = async () => {
+    setEventsLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/fixtures/events?fixture=${id}`, {
+        headers: { "x-apisports-key": API_KEY },
+      });
+      const data = await res.json();
+
+      if (data.response && data.response.length > 0) {
+        setEvents(data.response);
+      } else {
+        setEvents([]);
+      }
+    } catch (e) {
+      console.error("Erreur récupération des événements :", e);
+      setEvents([]);
+    } finally {
+      setEventsLoading(false);
+    }
+  };
+
+  fetchEvents();
+}, [matchDetails, id]);
+
+
   useEffect(() => {
     if (!matchDetails) return;
     const leagueId = matchDetails.league.id;
@@ -183,8 +214,8 @@ export default function DetailsPro() {
         const data = await res.json();
 
         if (!data.response.length) {
-          setClassement(null);
-          setClassementError(true);
+          setClassement([]); 
+          setClassementError(false);
         } else {
           const standingsData = data.response[0].league.standings;
 
@@ -240,228 +271,7 @@ export default function DetailsPro() {
     <View style={styles.container}>
       <MatchCard fixture={matchDetails} events={[]} />
 
-      {/* Onglets
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            activeTab === "details" && styles.activeTab,
-          ]}
-          onPress={() => setActiveTab("details")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "details" && styles.activeTabText,
-            ]}
-          >
-            Détails
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            activeTab === "composition" && styles.activeTab,
-          ]}
-          onPress={() => setActiveTab("composition")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "composition" && styles.activeTabText,
-            ]}
-          >
-            Compos
-          </Text>
-        </TouchableOpacity>
-
-        {classement && classement.length > 0 && (
-          <TouchableOpacity
-            style={[
-              styles.tabButton,
-              activeTab === "classement" && styles.activeTab,
-            ]}
-            onPress={() => setActiveTab("classement")}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === "classement" && styles.activeTabText,
-              ]}
-            >
-              Classement
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            activeTab === "historique" && styles.activeTab,
-          ]}
-          onPress={() => setActiveTab("historique")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "historique" && styles.activeTabText,
-            ]}
-          >
-            Historiques
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={{ flex: 1 }}>
-        {activeTab === "details" && (
-          <View>
-            <Text style={styles.heading}>Détails du Match</Text>
-            <Text style={styles.info}>
-              Stade : {venue.name}, {venue.city}
-            </Text>
-            {broadcasters && broadcasters.length > 0 ? (
-              <Text style={styles.info}>
-                Chaîne : {broadcasters.map((b) => b.name).join(", ")}
-              </Text>
-            ) : (
-              <Text style={styles.info}>Chaîne : Non disponible</Text>
-            )}
-          </View>
-        )}
-
-        {activeTab === "composition" &&
-          (compositionLoading ? (
-            <ActivityIndicator
-              size="large"
-              color="#f33"
-              style={{ marginTop: 20 }}
-            />
-          ) : composition.home.length === 0 && composition.away.length === 0 ? (
-            <View style={styles.compositionContainer}>
-              <Text
-                style={{
-                  textAlign: "center",
-                  fontWeight: "bold",
-                  marginVertical: 16,
-                  fontSize: 13,
-                  color: "white",
-                }}
-              >
-                La composition n'est pas encore dispo
-              </Text>
-            </View>
-          ) : (
-            <ScrollView contentContainerStyle={styles.compositionScroll}>
-              <View style={styles.compositionContainer}>
-                <TeamCompositionField
-                  team={[
-                    ...composition.home.map((player) => ({
-                      ...player,
-                      side: "home",
-                    })),
-                    ...composition.away.map((player) => ({
-                      ...player,
-                      side: "away",
-                    })),
-                  ]}
-                  isMerged={true}
-                />
-              </View>
-            </ScrollView>
-          ))}
-
-        {activeTab === "historique" &&
-          (historiqueLoading ? (
-            <ActivityIndicator
-              size="large"
-              color="#f33"
-              style={{ marginTop: 20 }}
-            />
-          ) : historiqueError ? (
-            <Text style={styles.noClassementText}>
-              Aucun historique disponible pour ces équipes.
-            </Text>
-          ) : historique.length === 0 ? (
-            <Text style={styles.noClassementText}>
-              Aucune confrontation récente trouvée.
-            </Text>
-          ) : (
-            <FlatList
-              data={historique}
-              keyExtractor={(item) => item.fixture.id.toString()}
-              renderItem={({ item }) => {
-                const dateMatch = new Date(item.fixture.date);
-                const dateFormatted = dateMatch.toLocaleDateString("fr-FR");
-                const scoreHome = item.goals.home;
-                const scoreAway = item.goals.away;
-
-                const scoreDisplay =
-                  scoreHome === null || scoreAway === null
-                    ? "Score non dispo"
-                    : `${scoreHome} - ${scoreAway}`;
-
-                <Text style={styles.historiqueScore}>{scoreDisplay}</Text>;
-
-                return (
-                  <View style={styles.historiqueRow}>
-                    <Text style={styles.historiqueDate}>{dateFormatted}</Text>
-                    <View style={styles.historiqueTeamsRow}>
-                      <Text style={styles.historiqueTeam}>
-                        {item.teams.home.name}
-                      </Text>
-                      <Text style={styles.historiqueScore}>
-                        {scoreHome} - {scoreAway}
-                      </Text>
-                      <Text style={styles.historiqueTeam}>
-                        {item.teams.away.name}
-                      </Text>
-                    </View>
-                    <Text style={styles.historiqueLeague}>
-                      {item.league.name}
-                    </Text>
-                  </View>
-                );
-              }}
-            />
-          ))}
-
-        {activeTab === "classement" &&
-          (classementLoading ? (
-            <ActivityIndicator
-              size="large"
-              color="#f33"
-              style={{ marginTop: 20 }}
-            />
-          ) : classementError ? (
-            <Text style={styles.noClassementText}>
-              Aucun classement disponible pour cette compétition.
-            </Text>
-          ) : (
-            <FlatList
-              data={classement}
-              keyExtractor={(item) => item.team.id.toString()}
-              renderItem={({ item, index }) => (
-                <View
-                  style={[
-                    styles.classementRow,
-                    index % 2 === 0
-                      ? styles.classementRowLight
-                      : styles.classementRowDark,
-                  ]}
-                >
-                  <Text style={styles.classementPos}>{index + 1}</Text>
-                  <Image
-                    source={{ uri: item.team.logo }}
-                    style={styles.classementLogo}
-                  />
-                  <Text style={styles.classementTeam}>{item.team.name}</Text>
-                  <Text style={styles.classementPoints}>{item.points} pts</Text>
-                </View>
-              )}
-            />
-          ))}
-      </View>*/}
+     
       <MatchDetailsTabs id={id} />
     </View>
   );
@@ -481,25 +291,37 @@ const MatchCard = ({ fixture, events }) => {
     minute: "2-digit",
   });
 
+  // Détecter si le match est en direct selon le statut (ex: 1H, 2H, ET, LIVE)
+  const isLive = ["1H", "2H", "ET", "LIVE"].includes(fix.status.short);
+
+  // Temps de jeu affiché uniquement si match en live
+  const gameTime = isLive && fix.status.elapsed !== null ? `${fix.status.elapsed}'` : "";
+
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: "#222",
-          height: 185,
-          borderColor: "#F73636",
-          borderWidth: 1,
-        },
-      ]}
-    >
+    <View style={[styles.card, { backgroundColor: "#222", borderColor: "#F73636", borderWidth: 1 }]}>
       <Text style={styles.league}>{league.name}</Text>
 
       <View style={styles.timeContainer}>
-        <Text style={styles.timeText}>
-          {formattedDate} à {formattedTime}
-        </Text>
+        {fix.status.short === "HT" ? (
+          <Text style={[styles.timeText, { fontWeight: "bold", color: "#EFECEC" }]}>
+            Mi-temps
+          </Text>
+        ) : (
+          <Text style={styles.timeText}>
+            {formattedDate} à {formattedTime}
+          </Text>
+        )}
+        {["FT", "AET", "PEN"].includes(fix.status.short) && (
+          <Text style={[styles.timeText, { color: "#EFECEC", fontWeight: "bold", marginTop: 4 }]}>
+            Terminé
+          </Text>
+        )}
       </View>
+
+      {/* Affichage du temps de jeu uniquement si match en live */}
+      {gameTime !== "" && (
+        <Text style={styles.playTime}>{gameTime}</Text>
+      )}
 
       <View style={styles.teamsRow}>
         <View style={styles.teamContainer}>
@@ -508,13 +330,9 @@ const MatchCard = ({ fixture, events }) => {
         </View>
 
         <View style={styles.scoreContainer}>
-          <Text style={styles.score}>
-            {fix.status.short === "NS" ? "" : goals.home}
-          </Text>
+          <Text style={styles.score}>{fix.status.short === "NS" ? "" : goals.home}</Text>
           <Text style={styles.scoreSeparator}> - </Text>
-          <Text style={styles.score}>
-            {fix.status.short === "NS" ? "" : goals.away}
-          </Text>
+          <Text style={styles.score}>{fix.status.short === "NS" ? "" : goals.away}</Text>
         </View>
 
         <View style={styles.teamContainer}>
@@ -524,14 +342,12 @@ const MatchCard = ({ fixture, events }) => {
       </View>
 
       <View style={{ marginTop: 10 }}>
-        {events
-          .filter((e) => e.type === "Goal")
-          .map((event, index) => (
-            <Text key={index} style={styles.goalEvent}>
-              ⚽ {event.player.name} - {event.time.elapsed}'
-              {event.assist ? ` (Passeur: ${event.assist.name})` : ""}
-            </Text>
-          ))}
+        {events.filter((e) => e.type === "Goal").map((event, index) => (
+          <Text key={index} style={styles.goalEvent}>
+            ⚽ {event.player.name} - {event.time.elapsed}'
+            {event.assist ? ` (Passeur: ${event.assist.name})` : ""}
+          </Text>
+        ))}
       </View>
     </View>
   );
@@ -553,6 +369,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.7,
     shadowRadius: 4,
     elevation: 5,
+    marginLeft: -7,
+    marginRight: -7
   },
   league: {
     fontSize: 16,
@@ -567,6 +385,13 @@ const styles = StyleSheet.create({
   timeText: {
     color: "#bbb",
     fontSize: 14,
+  },
+    playTime: {
+    color: "#f33",
+    fontWeight: "700",
+    fontSize: 18,
+    textAlign: "center",
+    marginBottom: 0,
   },
   teamsRow: {
     flexDirection: "row",
@@ -597,7 +422,7 @@ const styles = StyleSheet.create({
   score: {
     fontSize: 26,
     fontWeight: "bold",
-    color: "#f33",
+    color: "#FDFDFD",
   },
   scoreSeparator: {
     fontSize: 26,

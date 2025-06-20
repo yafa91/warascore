@@ -38,7 +38,7 @@ export default function ProgrammeTVScreen() {
       const today = moment().format('YYYY-MM-DD');
       const tomorrow = moment().add(1, 'day').format('YYYY-MM-DD');
 
-      // Matchs en live
+      
       const liveRes = await axios.get(`${API_URL}?live=all`, {
         headers: { 'x-apisports-key': API_KEY },
       });
@@ -134,9 +134,9 @@ const styles = StyleSheet.create({
   },
   title: {
     color: 'white',
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 11,
     marginBottom: 20,
+    marginLeft: 10,
   },
   card: {
     backgroundColor: '#1E1E1E',

@@ -321,7 +321,6 @@ const MatchCard = ({
   const groupGoalsByPlayer = (goals: Event[]) => {
     const grouped: Record<string, GoalInfo> = {};
 
-const groupedAwayGoals = groupGoalsByPlayer(awayGoals);
     goals.forEach((goal) => {
       const playerName = goal.player.name;
       const minute =

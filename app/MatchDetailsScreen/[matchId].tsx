@@ -6,7 +6,7 @@ import axios from "axios";
 import { useNavigation, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useLayoutEffect } from "react";
-import { Share } from 'react-native';
+import { Share } from "react-native";
 
 import { TabView, SceneMap, TabBar } from "react-native-tab-view";
 import { Dimensions } from "react-native";
@@ -23,81 +23,140 @@ import {
 } from "react-native";
 import MatchDetailsTabs from "@/components/MatchDetailsTabs";
 
+interface Team {
+  id: number;
+  name: string;
+  logo: string;
+}
+
+interface FixtureData {
+  id: number;
+  date: string;
+  venue: {
+    name: string;
+    city: string;
+  };
+  status: {
+    long: string;
+    short: string;
+    elapsed: number | null;
+    extra?: number | null;
+  };
+}
+
+interface MatchDetails {
+  fixture: FixtureData;
+  teams: {
+    home: Team;
+    away: Team;
+  };
+  league: {
+    id: number;
+    name: string;
+    logo: string;
+  };
+  goals: {
+    home: number | null;
+    away: number | null;
+  };
+}
+
+interface Event {
+  time: {
+    elapsed: number;
+    extra: number | null;
+  };
+  team: {
+    id: number;
+    name: string;
+  };
+  player: {
+    id: number;
+    name: string;
+  };
+  type: string;
+  detail: string;
+}
+
+interface GoalInfo {
+  minutes: string[];
+  ownGoal: boolean;
+  penalty: boolean;
+}
+
 const API_KEY = "b8b570d6f3ff7a8653dee3fb8922d929";
 
 export default function MatchDetails() {
   const { matchId }: { matchId: string } = useLocalSearchParams();
-  const [stats, setStats] = useState(null);
-  const [fixture, setFixture] = useState(null);
-  const [events, setEvents] = useState([]);
+  const [fixture, setFixture] = useState<MatchDetails | null>(null);
+  const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
-  
 
   const handleShare = async () => {
-  try {
-    const result = await Share.share({
-      message: `Regarde ce match en direct sur WaraScore ! ⚽️\nhttps://warascore.com/match/${matchId}`,
-    });
-    if (result.action === Share.sharedAction) {
-      if (result.activityType) {
-        console.log("Partagé via", result.activityType);
-      } else {
-        console.log("Match partagé");
+    try {
+      const result = await Share.share({
+        message: `Regarde ce match en direct sur WaraScore ! ⚽️\nhttps://warascore.com/match/${matchId}`,
+      });
+      if (result.action === Share.sharedAction) {
+        if (result.activityType) {
+          console.log("Partagé via", result.activityType);
+        } else {
+          console.log("Match partagé");
+        }
+      } else if (result.action === Share.dismissedAction) {
+        console.log("Partage annulé");
       }
-    } else if (result.action === Share.dismissedAction) {
-      console.log("Partage annulé");
+    } catch (error: any) {
+      console.error("Erreur lors du partage :", error.message);
     }
-  } catch (error) {
-    console.error("Erreur lors du partage :", error.message);
-  }
-};
+  };
 
-useEffect(() => {
-  navigation.setOptions({
-    headerTitle: "",
-    headerTitleAlign: "center",
-    headerStyle: { backgroundColor: "#121212" },
-    headerTitleStyle: { color: "white", fontWeight: "bold", fontSize: 18 },
-    headerLeft: () => (
-      <TouchableOpacity
-        onPress={() => navigation.goBack()}
-        style={{ marginLeft: 10 }}
-      >
-        <Ionicons name="arrow-back" size={24} color="white" />
-      </TouchableOpacity>
-    ),
-    headerRight: () => (
-      <View style={{ flexDirection: "row", marginRight: 10 }}>
-        {/* Bouton partage */}
+  useEffect(() => {
+    navigation.setOptions({
+      headerTitle: "",
+      headerTitleAlign: "center",
+      headerStyle: { backgroundColor: "#121212" },
+      headerTitleStyle: { color: "white", fontWeight: "bold", fontSize: 18 },
+      headerLeft: () => (
         <TouchableOpacity
-          onPress={() => {
-            const url = `https://monapp.com/match/${matchId}`; // <-- adapte cette URL à ton vrai lien
-            Share.share({
-              message: `Regarde ce match : ${url}`,
-              url, 
-              title: "Partage du match",
-            });
-          }}
-          style={{ marginRight: 15 }}
+          onPress={() => navigation.goBack()}
+          style={{ marginLeft: 10 }}
         >
-          <Ionicons name="share-outline" size={24} color="white" />
+          <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
+      ),
+      headerRight: () => (
+        <View style={{ flexDirection: "row", marginRight: 10 }}>
+          {/* Bouton partage */}
+          <TouchableOpacity
+            onPress={() => {
+              const url = `https://monapp.com/match/${matchId}`; // <-- adapte cette URL à ton vrai lien
+              Share.share({
+                message: `Regarde ce match : ${url}`,
+                url,
+                title: "Partage du match",
+              });
+            }}
+            style={{ marginRight: 15 }}
+          >
+            <Ionicons name="share-outline" size={24} color="white" />
+          </TouchableOpacity>
 
-        {/* Bouton notification */}
-        <TouchableOpacity
-          onPress={() => {
-            console.log("Match ajouté aux favoris ou notification activée");
-          }}
-          style={{ marginLeft: 12 }}
-        >
-          <Ionicons name="notifications-outline" size={24} color="white" />
-        </TouchableOpacity>
-      </View>
-    ),
-    headerShown: true,
-  });
-}, [navigation, matchId]);
+          {/* Bouton notification */}
+          <TouchableOpacity
+            onPress={() => {
+              console.log("Match ajouté aux favoris ou notification activée");
+            }}
+            style={{ marginLeft: 12 }}
+          >
+            <Ionicons name="notifications-outline" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
+      ),
+      headerShown: true,
+    });
+  }, [navigation, matchId]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -124,7 +183,7 @@ useEffect(() => {
   }, [navigation]);
 
   useEffect(() => {
-    let intervalId;
+    let intervalId: NodeJS.Timeout;
 
     const fetchMatchDetails = async () => {
       try {
@@ -133,96 +192,29 @@ useEffect(() => {
           { headers: { "x-apisports-key": API_KEY } }
         );
         const fixtureData = await fixtureRes.json();
-        if (!fixtureData.response.length) return setLoading(false);
+        if (!fixtureData.response.length) {
+          setLoading(false);
+          return;
+        }
 
         setFixture(fixtureData.response[0]);
 
-        const [statsRes, eventsRes] = await Promise.all([
-          fetch(
-            `https://v3.football.api-sports.io/fixtures/statistics?fixture=${matchId}`,
-            { headers: { "x-apisports-key": API_KEY } }
-          ),
-          fetch(
-            `https://v3.football.api-sports.io/fixtures/events?fixture=${matchId}`,
-            { headers: { "x-apisports-key": API_KEY } }
-          ),
-        ]);
-
-        const statsData = await statsRes.json();
+        const eventsRes = await fetch(
+          `https://v3.football.api-sports.io/fixtures/events?fixture=${matchId}`,
+          { headers: { "x-apisports-key": API_KEY } }
+        );
         const eventsData = await eventsRes.json();
-        
-
-        if (!statsData.response.length) return setLoading(false);
-
-        const [homeStats, awayStats] = statsData.response;
-
-        const getStat = (teamStats, type) =>
-          teamStats.statistics.find((s) => s.type === type)?.value ?? 0;
-
-        const yellowCards = eventsData.response.filter(
-          (e) => e.type === "Card" && e.detail === "Yellow Card"
-        );
-        const redCards = eventsData.response.filter(
-          (e) => e.type === "Card" && e.detail === "Red Card"
-        );
-
-        setStats({
-          possession: {
-            home: parseInt(getStat(homeStats, "Ball Possession")) || 0,
-            away: parseInt(getStat(awayStats, "Ball Possession")) || 0,
-          },
-          totalShots: {
-            home: getStat(homeStats, "Total Shots"),
-            away: getStat(awayStats, "Total Shots"),
-          },
-          shotsOnTarget: {
-            home: getStat(homeStats, "Shots on Goal"),
-            away: getStat(awayStats, "Shots on Goal"),
-          },
-          corners: {
-            home: getStat(homeStats, "Corner Kicks"),
-            away: getStat(awayStats, "Corner Kicks"),
-          },
-          fouls: {
-            home: getStat(homeStats, "Fouls"),
-            away: getStat(awayStats, "Fouls"),
-          },
-          offsides: {
-            home: getStat(homeStats, "Offsides"),
-            away: getStat(awayStats, "Offsides"),
-          },
-          yellowCards: {
-            home: yellowCards.filter((c) => c.team.name === homeStats.team.name)
-              .length,
-            away: yellowCards.filter((c) => c.team.name === awayStats.team.name)
-              .length,
-          },
-          redCards: {
-            home: redCards.filter((c) => c.team.name === homeStats.team.name)
-              .length,
-            away: redCards.filter((c) => c.team.name === awayStats.team.name)
-              .length,
-          },
-          passSuccess: {
-            home: parseInt(getStat(homeStats, "Passes %")) || 0,
-            away: parseInt(getStat(awayStats, "Passes %")) || 0,
-          },
-        });
-
         setEvents(eventsData.response);
-        setLoading(false);
       } catch (err) {
         console.error(err);
+      } finally {
         setLoading(false);
       }
     };
 
     if (matchId) {
       fetchMatchDetails();
-
-      intervalId = setInterval(() => {
-        fetchMatchDetails();
-      }, 30000);
+      intervalId = setInterval(fetchMatchDetails, 30000);
     }
 
     return () => clearInterval(intervalId);
@@ -247,92 +239,44 @@ useEffect(() => {
 
   return (
     <View style={styles.container}>
-      <MatchCard fixture={fixture} events={events} />
+      {fixture && <MatchCard fixture={fixture} events={events} />}
       <MatchDetailsTabs id={matchId} />
-
-      {stats ? (
-        <>
-          <Text style={styles.sectionTitle}>Statistiques</Text>
-          <StatRow
-            label="Possession de balle"
-            home={stats.possession.home}
-            away={stats.possession.away}
-            isPercent
-          />
-          <StatRow
-            label="Tirs totaux"
-            home={stats.totalShots.home}
-            away={stats.totalShots.away}
-          />
-          <StatRow
-            label="Tirs cadrés"
-            home={stats.shotsOnTarget.home}
-            away={stats.shotsOnTarget.away}
-          />
-          <StatRow
-            label="Corners"
-            home={stats.corners.home}
-            away={stats.corners.away}
-          />
-          <StatRow
-            label="Fautes"
-            home={stats.fouls.home}
-            away={stats.fouls.away}
-          />
-          <StatRow
-            label="Hors-jeu"
-            home={stats.offsides.home}
-            away={stats.offsides.away}
-          />
-          <StatRow
-            label="Cartons jaunes"
-            home={stats.yellowCards.home}
-            away={stats.yellowCards.away}
-          />
-          <StatRow
-            label="Cartons rouges"
-            home={stats.redCards.home}
-            away={stats.redCards.away}
-          />
-          <StatRow
-            label="Passes réussies"
-            home={stats.passSuccess.home}
-            away={stats.passSuccess.away}
-            isPercent
-          />
-        </>
-      ) : (
-        <Text style={{ color: "#ccc", textAlign: "center", marginTop: 10 }}>
-          Statistiques non disponibles pour le moment.
-        </Text>
-      )}
     </View>
   );
 }
 
-const MatchCard = ({ fixture, events }) => {
+const MatchCard = ({
+  fixture,
+  events,
+}: {
+  fixture: MatchDetails;
+  events: Event[];
+}) => {
   const { teams, goals, league, fixture: fix } = fixture;
-  
- 
+
   const now = new Date();
   const fixtureStartTime = new Date(fix.date);
-  const secondsElapsed = Math.floor((now - fixtureStartTime) / 1000);
+  const secondsElapsed = Math.floor(
+    (now.getTime() - fixtureStartTime.getTime()) / 1000
+  );
 
-  const recentGoal = events.some(event => {
+  const recentGoal = events.some((event) => {
     if (event.type !== "Goal" || !event.time.elapsed) return false;
     const eventSeconds = event.time.elapsed * 60 + (event.time.extra ?? 0);
-    return eventSeconds >= secondsElapsed - 10 && eventSeconds <= secondsElapsed;
+    return (
+      eventSeconds >= secondsElapsed - 10 && eventSeconds <= secondsElapsed
+    );
   });
 
-  const recentBigChance = events.some(event => {
-     return (
-    (event.type === "Shot" || event.detail === "Big chance") &&
-    event.time.elapsed !== null &&
-    event.time.elapsed * 60 + (event.time.extra ?? 0) >= secondsElapsed - 11 &&
-    event.time.elapsed * 60 + (event.time.extra ?? 0) <= secondsElapsed
-  );
-})
-
+  const recentBigChance = events.some((event) => {
+    return (
+      (event.type === "Shot" || event.detail === "Big chance") &&
+      event.time.elapsed !== null &&
+      event.time.elapsed * 60 + (event.time.extra ?? 0) >=
+        secondsElapsed - 11 &&
+      event.time.elapsed * 60 + (event.time.extra ?? 0) <= secondsElapsed
+    );
+  });
 
   const currentMinute = fix.status.elapsed;
   const extraMinute = fix.status.extra;
@@ -340,15 +284,15 @@ const MatchCard = ({ fixture, events }) => {
   const matchStatus = fix.status.short;
 
   const displayMinute =
-  matchStatus === "INT"
-    ? "Mi-temps"
-    : ["SUSP", "PST", "ABD"].includes(matchStatus)
-    ? "Interruption"
-    : currentMinute !== null
-    ? extraMinute
-      ? `${currentMinute}+${extraMinute}`
-      : `${currentMinute}`
-    : null;
+    matchStatus === "INT"
+      ? "Mi-temps"
+      : ["SUSP", "PST", "ABD"].includes(matchStatus)
+      ? "Interruption"
+      : currentMinute !== null
+      ? extraMinute
+        ? `${currentMinute}+${extraMinute}`
+        : `${currentMinute}`
+      : null;
 
   const secondsAhead = 3;
   const hasUpcomingGoal = events.some((event) => {
@@ -374,30 +318,31 @@ const MatchCard = ({ fixture, events }) => {
       (!isPenaltyShootout || e.detail !== "Penalty")
   );
 
-  const groupGoalsByPlayer = (goals) => {
-  const grouped = {};
+  const groupGoalsByPlayer = (goals: Event[]) => {
+    const grouped: Record<string, GoalInfo> = {};
 
-  goals.forEach(goal => {
-    const playerName = goal.player.name;
-    const minute = goal.time.elapsed + (goal.time.extra ? `+${goal.time.extra}` : '');
-
-    if (!grouped[playerName]) {
-      grouped[playerName] = {
-        minutes: [minute],
-        ownGoal: goal.detail === "Own Goal",
-        penalty: goal.detail === "Penalty",
-      };
-    } else {
-      grouped[playerName].minutes.push(minute);
-    }
-  });
-
-  return grouped;
-};
- 
-const groupedHomeGoals = groupGoalsByPlayer(homeGoals);
 const groupedAwayGoals = groupGoalsByPlayer(awayGoals);
+    goals.forEach((goal) => {
+      const playerName = goal.player.name;
+      const minute =
+        goal.time.elapsed + (goal.time.extra ? `+${goal.time.extra}` : "");
 
+      if (!grouped[playerName]) {
+        grouped[playerName] = {
+          minutes: [minute],
+          ownGoal: goal.detail === "Own Goal",
+          penalty: goal.detail === "Penalty",
+        };
+      } else {
+        grouped[playerName].minutes.push(minute);
+      }
+    });
+
+    return grouped;
+  };
+
+  const groupedHomeGoals = groupGoalsByPlayer(homeGoals);
+  const groupedAwayGoals = groupGoalsByPlayer(awayGoals);
 
   return (
     <View style={styles.card}>
@@ -405,134 +350,118 @@ const groupedAwayGoals = groupGoalsByPlayer(awayGoals);
         <Image source={{ uri: league.logo }} style={styles.leagueLogo} />
         <Text style={styles.league}>{league.name}</Text>
       </View>
-  
-  <View style={styles.timeContainer}>
-  {fix.status.short === "HT" ? (
-    <Text style={styles.timeText}>Mi-temps</Text>
-  ) : ["SUSP", "PST", "ABD"].includes(fix.status.short) ? (
-    <Text style={styles.timeText}>Interrompu</Text>  
-  ) : fix.status.short === "1H" ||
-    fix.status.short === "2H" ||
-    fix.status.short === "ET" ||
-    fix.status.short === "P" ||
-    fix.status.short === "LIVE" ? (
-    <Text style={styles.timeText}>
-      {currentMinute !== null ? `${currentMinute}'` : fix.status.long}
-    </Text>
-  ) : (
-    <Text style={styles.timeTextDate}>
-      {new Date(fix.date).toLocaleDateString([], {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      })}{" "}
-      -{" "}
-      {new Date(fix.date).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}
-    </Text>
-  )}
-</View>
 
+      <View style={styles.timeContainer}>
+        {fix.status.short === "HT" ? (
+          <Text style={styles.timeText}>Mi-temps</Text>
+        ) : ["SUSP", "PST", "ABD"].includes(fix.status.short) ? (
+          <Text style={styles.timeText}>Interrompu</Text>
+        ) : fix.status.short === "1H" ||
+          fix.status.short === "2H" ||
+          fix.status.short === "ET" ||
+          fix.status.short === "P" ||
+          fix.status.short === "LIVE" ? (
+          <Text style={styles.timeText}>
+            {currentMinute !== null ? `${currentMinute}'` : fix.status.long}
+          </Text>
+        ) : (
+          <Text style={styles.timeTextDate}>
+            {new Date(fix.date).toLocaleDateString([], {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+            })}{" "}
+            -{" "}
+            {new Date(fix.date).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </Text>
+        )}
+      </View>
 
       <View style={styles.teamsRow}>
         <View style={styles.teamContainer}>
           <Image source={{ uri: teams.home.logo }} style={styles.teamLogo} />
           <Text style={styles.teamName}>{teams.home.name}</Text>
-          
-
-          <View style={{ height: 8 }} />
-           {(goals.home + goals.away) > 0 && (
-  <>
-    <View style={{ height: 8 }} />
-    <View style={styles.separator} />
-  </>
-)}
-    
-
- {/* Buts domicile */}
-{Object.entries(groupedHomeGoals).map(([playerName, info]) => (
-  <Text key={`home-goal-${playerName}`} style={styles.goalEvent}>
-    ⚽ {playerName} - {info.minutes.join(", ")}'
-    {info.ownGoal && " (CSC)"}
-    {info.penalty && " (Penalty)"}
-  </Text>
-))}
         </View>
-  
+
         <View style={styles.scoreContainer}>
           <Text style={styles.score}>{goals.home ?? 0}</Text>
           <Text style={styles.scoreSeparator}> - </Text>
           <Text style={styles.score}>{goals.away ?? 0}</Text>
         </View>
-          
+
         {(recentGoal || recentBigChance) && (
-  <View style={{ marginTop: 10 }}>
-    <Text style={{ color: "#FFD700", fontWeight: "bold", textAlign: "center", fontSize: 16 }}>
-      🔥 Grosse occasion !
-    </Text>
-  </View>
-)}
+          <View style={{ marginTop: 10 }}>
+            <Text
+              style={{
+                color: "#FFD700",
+                fontWeight: "bold",
+                textAlign: "center",
+                fontSize: 16,
+              }}
+            >
+              🔥 Grosse occasion !
+            </Text>
+          </View>
+        )}
 
         <View style={styles.teamContainer}>
           <Image source={{ uri: teams.away.logo }} style={styles.teamLogo} />
           <Text style={styles.teamName}>{teams.away.name}</Text>
-
-          <View style={{ height: 30 }} />
-
-  {/* Buts extérieur */}
-{Object.entries(groupedAwayGoals).map(([playerName, info]) => (
-  <Text key={`away-goal-${playerName}`} style={styles.goalEvent}>
-    ⚽ {playerName} - {info.minutes.join(", ")}'
-    {info.ownGoal && " (CSC)"}
-    {info.penalty && " (Penalty)"}
-  </Text>
-))}
         </View>
       </View>
-         {(recentGoal || recentBigChance) && (
-  <View style={{ marginTop: 10 }}>
-    <Text style={{
-      color: "#FFD700",
-      fontWeight: "bold",
-      textAlign: "center",
-      fontSize: 16,
-    }}>
-      🔥 Grosse occasion !
-    </Text>
-  </View>
-)}
-    </View>
-  );
-};
+      {homeGoals.length > 0 || awayGoals.length > 0 ? (
+        <View style={styles.separator} />
+      ) : null}
 
-const StatRow = ({ label, home, away, isPercent }) => {
-  const total = Number(home) + Number(away);
-  const homeWidth = total ? (Number(home) / total) * 100 : 50;
-  const awayWidth = 100 - homeWidth;
-
-  return (
-    <View style={{ marginBottom: -15 }}>
-      <Text style={styles.statLabelTitle}>{label}</Text>
-      <View style={styles.statRow}>
-        <Text style={styles.teamStat}>{isPercent ? `${home}%` : home}</Text>
-        <View style={styles.statBarContainer}>
-          <View
-            style={[
-              styles.bar,
-              { width: `${homeWidth}%`, backgroundColor: "#F54040" },
-            ]}
-          />
-          <View
-            style={[
-              styles.bar,
-              { width: `${awayWidth}%`, backgroundColor: "#FEFEFE" },
-            ]}
-          />
+      <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+        <View style={{ flex: 1 }}>
+          {/* Buts domicile */}
+          {Object.entries(groupedHomeGoals).map(([playerName, info]) => (
+            <Text
+              key={`home-goal-${playerName}`}
+              style={[styles.goalEvent, { textAlign: "left" }]}
+            >
+              {playerName} - {info.minutes.join(", ")}'
+              {info.ownGoal && " (CSC)"}
+              {info.penalty && " (Penalty)"}
+            </Text>
+          ))}
         </View>
-        <Text style={styles.teamStat}>{isPercent ? `${away}%` : away}</Text>
+        <View style={{ paddingHorizontal: 10 }}>
+          <Text>⚽</Text>
+        </View>
+
+        <View style={{ flex: 1 }}>
+          {/* Buts extérieur */}
+          {Object.entries(groupedAwayGoals).map(([playerName, info]) => (
+            <Text
+              key={`away-goal-${playerName}`}
+              style={[styles.goalEvent, { textAlign: "right" }]}
+            >
+              {playerName} - {info.minutes.join(", ")}'
+              {info.ownGoal && " (CSC)"}
+              {info.penalty && " (Penalty)"}
+            </Text>
+          ))}
+        </View>
       </View>
+      {(recentGoal || recentBigChance) && (
+        <View style={{ marginTop: 10 }}>
+          <Text
+            style={{
+              color: "#FFD700",
+              fontWeight: "bold",
+              textAlign: "center",
+              fontSize: 16,
+            }}
+          >
+            🔥 Grosse occasion !
+          </Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -564,7 +493,17 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "bold",
     textAlign: "center",
+  },
+  leagueContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 10,
+  },
+  leagueLogo: {
+    width: 25,
+    height: 25,
+    marginRight: 10,
   },
   timeContainer: {
     alignItems: "center",
@@ -575,6 +514,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     marginTop: 10,
+    width: "auto",
   },
   timeTextDate: {
     color: "#8B8989",
@@ -584,7 +524,7 @@ const styles = StyleSheet.create({
   teamsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     alignSelf: "stretch",
   },
   teamContainer: {
@@ -592,12 +532,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   separator: {
-  height: 1,
-  backgroundColor: '#8B8989',
-  marginVertical: 9,
-  width: '240%',
-  marginLeft: 212,
-},
+    height: 1,
+    backgroundColor: "#424242",
+    marginVertical: 9,
+    width: "100%",
+  },
   teamLogo: {
     width: 40,
     height: 40,
@@ -619,20 +558,17 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 22,
     fontWeight: "bold",
-    marginBottom: 56,
   },
   scoreSeparator: {
     color: "#fff",
     fontSize: 40,
     fontWeight: "bold",
     marginHorizontal: 5,
-    marginBottom: 56,
   },
   goalEvent: {
     color: "#C4C3C3",
     fontSize: 12,
     marginBottom: 2,
-    textAlign: "center",
     fontStyle: "italic",
     textShadowColor: "#000",
     textShadowOffset: { width: 0.5, height: 0.5 },

@@ -48,17 +48,19 @@ interface MatchDetails {
   }>;
 }
 
-interface Player {
+interface LineupPlayer {
   player: {
     id: number;
     name: string;
+    number: number;
+    pos: string;
+    grid: string | null;
   };
-  team: Team;
 }
 
 interface TeamLineup {
   team: Team;
-  startXI: Player[];
+  startXI: LineupPlayer[];
 }
 
 interface StandingTeam {
@@ -78,20 +80,42 @@ interface StandingTeam {
   };
 }
 
-interface TeamCompositionFieldProps {
-  team: Array<{
-    side: string;
-    player: {
-      id: number;
-      name: string;
-    };
-    team: Team;
+interface Stats {
+  possession: { home: number; away: number };
+  totalShots: { home: number; away: number };
+  shotsOnTarget: { home: number; away: number };
+  corners: { home: number; away: number };
+  fouls: { home: number; away: number };
+  offsides: { home: number; away: number };
+  yellowCards: { home: number; away: number };
+  redCards: { home: number; away: number };
+  passSuccess: { home: number; away: number };
+}
+
+interface TeamStats {
+  team: Team;
+  statistics: Array<{
+    type: string;
+    value: string | number | null;
   }>;
-  isMerged: boolean;
+}
+
+interface Event {
+  type: string;
+  detail: string;
+  team: Team;
 }
 
 const API_URL = "https://v3.football.api-sports.io";
 const API_KEY = "b8b570d6f3ff7a8653dee3fb8922d929";
+
+const parseGrid = (grid: string | null) => {
+  if (!grid) {
+    return { x: 0, y: 0 };
+  }
+  const [y, x] = grid.split(":").map(Number);
+  return { x, y };
+};
 
 const windowWidth = Dimensions.get("window").width;
 
@@ -103,14 +127,16 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
   const [activeTab, setActiveTab] = useState("details");
 
   const [composition, setComposition] = useState<{
-    home: Player[];
-    away: Player[];
+    home: LineupPlayer[];
+    away: LineupPlayer[];
   }>({ home: [], away: [] });
   const [compositionLoading, setCompositionLoading] = useState(true);
 
   const [classement, setClassement] = useState<StandingTeam[] | null>(null);
   const [classementLoading, setClassementLoading] = useState(true);
   const [classementError, setClassementError] = useState(false);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [events, setEvents] = useState<Event[]>([]);
 
   const [historique, setHistorique] = useState<MatchDetails[]>([]);
   const [historiqueLoading, setHistoriqueLoading] = useState(false);
@@ -276,6 +302,115 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
 
     fetchClassement();
   }, [matchDetails]);
+
+  useEffect(() => {
+    let intervalId: any;
+
+    const fetchMatchDetails = async () => {
+      try {
+        const fixtureRes = await fetch(
+          `https://v3.football.api-sports.io/fixtures?id=${id}`,
+          { headers: { "x-apisports-key": API_KEY } }
+        );
+        const fixtureData = await fixtureRes.json();
+        if (!fixtureData.response.length) return setLoading(false);
+
+        const [statsRes, eventsRes] = await Promise.all([
+          fetch(
+            `https://v3.football.api-sports.io/fixtures/statistics?fixture=${id}`,
+            { headers: { "x-apisports-key": API_KEY } }
+          ),
+          fetch(
+            `https://v3.football.api-sports.io/fixtures/events?fixture=${id}`,
+            { headers: { "x-apisports-key": API_KEY } }
+          ),
+        ]);
+
+        const statsData = await statsRes.json();
+        const eventsData = await eventsRes.json();
+
+        if (!statsData.response.length) return setLoading(false);
+
+        const [homeStats, awayStats]: [TeamStats, TeamStats] =
+          statsData.response;
+
+        const getStat = (teamStats: TeamStats, type: string) =>
+          teamStats.statistics.find((s) => s.type === type)?.value ?? 0;
+
+        const yellowCards = eventsData.response.filter(
+          (e: Event) => e.type === "Card" && e.detail === "Yellow Card"
+        );
+        const redCards = eventsData.response.filter(
+          (e: Event) => e.type === "Card" && e.detail === "Red Card"
+        );
+
+        setStats({
+          possession: {
+            home:
+              parseInt(getStat(homeStats, "Ball Possession") as string) || 0,
+            away:
+              parseInt(getStat(awayStats, "Ball Possession") as string) || 0,
+          },
+          totalShots: {
+            home: getStat(homeStats, "Total Shots") as number,
+            away: getStat(awayStats, "Total Shots") as number,
+          },
+          shotsOnTarget: {
+            home: getStat(homeStats, "Shots on Goal") as number,
+            away: getStat(awayStats, "Shots on Goal") as number,
+          },
+          corners: {
+            home: getStat(homeStats, "Corner Kicks") as number,
+            away: getStat(awayStats, "Corner Kicks") as number,
+          },
+          fouls: {
+            home: getStat(homeStats, "Fouls") as number,
+            away: getStat(awayStats, "Fouls") as number,
+          },
+          offsides: {
+            home: getStat(homeStats, "Offsides") as number,
+            away: getStat(awayStats, "Offsides") as number,
+          },
+          yellowCards: {
+            home: yellowCards.filter(
+              (c: any) => c.team.name === homeStats.team.name
+            ).length,
+            away: yellowCards.filter(
+              (c: any) => c.team.name === awayStats.team.name
+            ).length,
+          },
+          redCards: {
+            home: redCards.filter(
+              (c: any) => c.team.name === homeStats.team.name
+            ).length,
+            away: redCards.filter(
+              (c: any) => c.team.name === awayStats.team.name
+            ).length,
+          },
+          passSuccess: {
+            home: parseInt(getStat(homeStats, "Passes %") as string) || 0,
+            away: parseInt(getStat(awayStats, "Passes %") as string) || 0,
+          },
+        });
+        setEvents(eventsData.response);
+        setLoading(false);
+      } catch (err) {
+        console.error(err);
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchMatchDetails();
+
+      intervalId = setInterval(() => {
+        fetchMatchDetails();
+      }, 30000);
+    }
+
+    return () => clearInterval(intervalId);
+  }, [id]);
+
   const venue = matchDetails?.fixture.venue;
   const broadcasters = matchDetails?.broadcast;
 
@@ -284,95 +419,177 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
   return (
     <>
       {/* Onglets */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            activeTab === "details" && styles.activeTab,
-          ]}
-          onPress={() => setActiveTab("details")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "details" && styles.activeTabText,
-            ]}
-          >
-            Détails
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            activeTab === "composition" && styles.activeTab,
-          ]}
-          onPress={() => setActiveTab("composition")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "composition" && styles.activeTabText,
-            ]}
-          >
-            Compos
-          </Text>
-        </TouchableOpacity>
-
-        {classement && classement.length > 0 && (
-          <TouchableOpacity
-            style={[
-              styles.tabButton,
-              activeTab === "classement" && styles.activeTab,
-            ]}
-            onPress={() => setActiveTab("classement")}
-          >
-            <Text
+      <View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={styles.tabsContainer}>
+            <TouchableOpacity
               style={[
-                styles.tabText,
-                activeTab === "classement" && styles.activeTabText,
+                styles.tabButton,
+                activeTab === "details" && styles.activeTab,
               ]}
+              onPress={() => setActiveTab("details")}
             >
-              Classement
-            </Text>
-          </TouchableOpacity>
-        )}
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === "details" && styles.activeTabText,
+                ]}
+              >
+                Détails
+              </Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            activeTab === "historique" && styles.activeTab,
-          ]}
-          onPress={() => setActiveTab("historique")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "historique" && styles.activeTabText,
-            ]}
-          >
-            Historiques
-          </Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.tabButton,
+                activeTab === "stats" && styles.activeTab,
+              ]}
+              onPress={() => setActiveTab("stats")}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === "stats" && styles.activeTabText,
+                ]}
+              >
+                Statistiques
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.tabButton,
+                activeTab === "composition" && styles.activeTab,
+              ]}
+              onPress={() => setActiveTab("composition")}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === "composition" && styles.activeTabText,
+                ]}
+              >
+                Compos
+              </Text>
+            </TouchableOpacity>
+
+            {classement && classement.length > 0 && (
+              <TouchableOpacity
+                style={[
+                  styles.tabButton,
+                  activeTab === "classement" && styles.activeTab,
+                ]}
+                onPress={() => setActiveTab("classement")}
+              >
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTab === "classement" && styles.activeTabText,
+                  ]}
+                >
+                  Classement
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={[
+                styles.tabButton,
+                activeTab === "historique" && styles.activeTab,
+              ]}
+              onPress={() => setActiveTab("historique")}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === "historique" && styles.activeTabText,
+                ]}
+              >
+                Historiques
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </View>
+
       <View style={{ flex: 1 }}>
         {activeTab === "details" && (
-          <View>
-            <Text style={styles.heading}>Détails du Match</Text>
-            <Text style={styles.info}>
-              Stade : {venue?.name}, {venue?.city}
-            </Text>
-            {broadcasters && broadcasters.length > 0 ? (
+          <ScrollView>
+            <View>
+              <Text style={styles.heading}>Détails du Match</Text>
               <Text style={styles.info}>
-                Chaîne :{" "}
-                {broadcasters.map((b: { name: string }) => b.name).join(", ")}
+                Stade : {venue?.name}, {venue?.city}
               </Text>
-            ) : (
-              <Text style={styles.info}>Chaîne : Non disponible</Text>
-            )}
-          </View>
+              {broadcasters && broadcasters.length > 0 ? (
+                <Text style={styles.info}>
+                  Chaîne :{" "}
+                  {broadcasters.map((b: { name: string }) => b.name).join(", ")}
+                </Text>
+              ) : (
+                <Text style={styles.info}>Chaîne : Non disponible</Text>
+              )}
+            </View>
+          </ScrollView>
         )}
-
+        {activeTab === "stats" &&
+          (stats ? (
+            <ScrollView>
+              <View>
+                <Text style={styles.sectionTitle}>Statistiques</Text>
+                <StatRow
+                  label="Possession de balle"
+                  home={stats.possession.home}
+                  away={stats.possession.away}
+                  isPercent
+                />
+                <StatRow
+                  label="Tirs totaux"
+                  home={stats.totalShots.home}
+                  away={stats.totalShots.away}
+                />
+                <StatRow
+                  label="Tirs cadrés"
+                  home={stats.shotsOnTarget.home}
+                  away={stats.shotsOnTarget.away}
+                />
+                <StatRow
+                  label="Corners"
+                  home={stats.corners.home}
+                  away={stats.corners.away}
+                />
+                <StatRow
+                  label="Fautes"
+                  home={stats.fouls.home}
+                  away={stats.fouls.away}
+                />
+                <StatRow
+                  label="Hors-jeu"
+                  home={stats.offsides.home}
+                  away={stats.offsides.away}
+                />
+                <StatRow
+                  label="Cartons jaunes"
+                  home={stats.yellowCards.home}
+                  away={stats.yellowCards.away}
+                />
+                <StatRow
+                  label="Cartons rouges"
+                  home={stats.redCards.home}
+                  away={stats.redCards.away}
+                />
+                <StatRow
+                  label="Passes réussies"
+                  home={stats.passSuccess.home}
+                  away={stats.passSuccess.away}
+                  isPercent
+                />
+              </View>
+            </ScrollView>
+          ) : (
+            <Text style={{ color: "#ccc", textAlign: "center", marginTop: 10 }}>
+              Statistiques non disponibles pour le moment.
+            </Text>
+          ))}
         {activeTab === "composition" &&
           (compositionLoading ? (
             <ActivityIndicator
@@ -398,24 +615,18 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
             <ScrollView contentContainerStyle={styles.compositionScroll}>
               <View style={styles.compositionContainer}>
                 <TeamCompositionField
-                  team={[
-                    ...composition.home.map((player) => ({
-                      side: "home",
-                      player: player.player,
-                      team: player.team,
-                    })),
-                    ...composition.away.map((player) => ({
-                      side: "away",
-                      player: player.player,
-                      team: player.team,
-                    })),
-                  ]}
-                  isMerged={true}
+                  homeTeam={composition.home.map((p) => ({
+                    ...p.player,
+                    ...parseGrid(p.player.grid),
+                  }))}
+                  awayTeam={composition.away.map((p) => ({
+                    ...p.player,
+                    ...parseGrid(p.player.grid),
+                  }))}
                 />
               </View>
             </ScrollView>
           ))}
-
         {activeTab === "historique" &&
           (historiqueLoading ? (
             <ActivityIndicator
@@ -446,8 +657,6 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
                     ? "Score non dispo"
                     : `${scoreHome} - ${scoreAway}`;
 
-                <Text style={styles.historiqueScore}>{scoreDisplay}</Text>;
-
                 return (
                   <View style={styles.historiqueRow}>
                     <Text style={styles.historiqueDate}>{dateFormatted}</Text>
@@ -470,7 +679,6 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
               }}
             />
           ))}
-
         {activeTab === "classement" &&
           (classementLoading ? (
             <ActivityIndicator
@@ -511,12 +719,74 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
   );
 }
 
+const StatRow = ({
+  label,
+  home,
+  away,
+  isPercent,
+}: {
+  label: string;
+  home: number | string;
+  away: number | string;
+  isPercent?: boolean;
+}) => {
+  const total = Number(home) + Number(away);
+  const homeWidth = total ? (Number(home) / total) * 100 : 50;
+  const awayWidth = 100 - homeWidth;
+
+  return (
+    <View style={{ marginBottom: -15 }}>
+      <Text style={styles.statLabelTitle}>{label}</Text>
+      <View style={styles.statRow}>
+        <Text style={styles.teamStat}>{isPercent ? `${home}%` : home}</Text>
+        <View style={styles.statBarContainer}>
+          <View
+            style={[
+              styles.bar,
+              { width: `${homeWidth}%`, backgroundColor: "#F54040" },
+            ]}
+          />
+          <View
+            style={[
+              styles.bar,
+              { width: `${awayWidth}%`, backgroundColor: "#FEFEFE" },
+            ]}
+          />
+        </View>
+        <Text style={styles.teamStat}>{isPercent ? `${away}%` : away}</Text>
+      </View>
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#121212",
     paddingHorizontal: 15,
     paddingTop: 10,
+  },
+  statRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  statBarContainer: {
+    flex: 1,
+    height: 12,
+    flexDirection: "row",
+    backgroundColor: "#333",
+    borderRadius: 6,
+    overflow: "hidden",
+    marginHorizontal: 10,
+    position: "relative",
+  },
+
+  statLabelTitle: {
+    color: "#fff",
+    fontSize: 14,
+    marginBottom: 5,
+    textAlign: "center",
   },
   card: {
     backgroundColor: "#1e1e1e",
@@ -527,6 +797,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.7,
     shadowRadius: 4,
     elevation: 5,
+  },
+  bar: {
+    height: 12,
+  },
+  statLabel: {
+    position: "absolute",
+    width: "100%",
+    textAlign: "center",
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 12,
+    top: -16,
+  },
+  teamStat: {
+    color: "#fff",
+    width: 40,
+    textAlign: "center",
   },
   league: {
     fontSize: 16,
@@ -592,14 +879,19 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#444",
-    justifyContent: "space-between",
+    height: 50,
   },
   tabButton: {
     paddingVertical: 10,
-    paddingHorizontal: 25,
-    marginHorizontal: -19,
+    paddingHorizontal: 15,
     borderBottomWidth: 3,
     borderBottomColor: "transparent",
+  },
+  sectionTitle: {
+    color: "#f33",
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 10,
   },
   activeTab: {
     borderBottomColor: "#FFFFFF",

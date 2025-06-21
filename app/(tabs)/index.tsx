@@ -11,6 +11,7 @@ import {
   StyleSheet,
   FlatList,
   Animated,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,26 +25,40 @@ import {
 } from "@/utils/favoriteUtils";
 import { useFavorites } from "@/context/FavoritesContext";
 
-type Match = {
+interface Team {
+  id: number;
+  name: string;
+  logo: string;
+}
+
+interface League {
+  id: number;
+  name: string;
+  logo: string;
+  country: string;
+  flag: string;
+}
+
+interface Match {
   fixture: {
     id: number;
     date: string;
-    status: { short: string; elapsed: number | null };
-    league: {
-      id: number;
-      name: string;
-      logo: string;
-    };
-    teams: {
-      home: { name: string; logo: string };
-      away: { name: string; logo: string };
-    };
-    goals: {
-      home: number;
-      away: number;
+    status: {
+      long: string;
+      short: string;
+      elapsed: number | null;
     };
   };
-};
+  teams: {
+    home: Team;
+    away: Team;
+  };
+  goals: {
+    home: number | null;
+    away: number | null;
+  };
+  league: League;
+}
 
 const API_URL = "https://v3.football.api-sports.io/fixtures";
 const API_KEY = "b8b570d6f3ff7a8653dee3fb8922d929";
@@ -56,10 +71,9 @@ export default function App() {
   );
 }
 
-
 const LiveBadge = () => {
   const pulse = useRef(new Animated.Value(1)).current;
- 
+
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
@@ -108,10 +122,8 @@ export function AppContent() {
   const scrollX = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-  removeFinishedMatchesFromFavorites();
-}, []);
-   
-
+    removeFinishedMatchesFromFavorites();
+  }, []);
 
   const getCurrentDate = () => new Date().toISOString().split("T")[0];
 
@@ -164,26 +176,26 @@ export function AppContent() {
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
-     const fetchMatches = async () => {
-  try {
-    const response = await fetch(`${API_URL}?date=${selectedDate}`, {
-      headers: { "x-apisports-key": API_KEY },
-    });
+    const fetchMatches = async () => {
+      try {
+        const response = await fetch(`${API_URL}?date=${selectedDate}`, {
+          headers: { "x-apisports-key": API_KEY },
+        });
 
-    if (!response.ok) {
-      console.warn("API response not OK:", response.status);
-      setMatches([]);
-      setLoading(false);
-      return;
-    }
-    const data = await response.json();
+        if (!response.ok) {
+          console.warn("API response not OK:", response.status);
+          setMatches([]);
+          setLoading(false);
+          return;
+        }
+        const data = await response.json();
         const allMatches = data.response || [];
 
         const europeanLeagues = [
           1, 2, 3, 4, 5, 6, 9, 11, 13, 14, 16, 17, 39, 40, 61, 62, 78, 88, 94,
           98, 135, 136, 140, 143, 2000, 2001, 2002, 203, 253, 263, 264, 266,
           292, 307, 848, 210, 30, 15, 858, 36, 34, 31, 894, 32, 239, 859, 38,
-          131, 141, 240, 329, 186
+          131, 141, 240, 329, 186,
         ];
 
         const europeanMatches = allMatches.filter((match: Match) =>
@@ -213,7 +225,7 @@ export function AppContent() {
 
   const liveMatches = matches.filter((match) => {
     const status = match.fixture.status.short;
-    return ["1H", "2H", "ET", "P", "LIVE", "HT", "BT", "INT",].includes(status);
+    return ["1H", "2H", "ET", "P", "LIVE", "HT", "BT", "INT"].includes(status);
   });
 
   const upcomingMatches = matches.filter((match) => {
@@ -222,8 +234,7 @@ export function AppContent() {
 
     const startOfDay = new Date(selectedDate + "T00:00:00").getTime();
     const endOfDay = new Date(selectedDate + "T23:30:00").getTime();
-     
-    
+
     return (
       matchTime >= now &&
       matchTime >= startOfDay &&
@@ -231,11 +242,13 @@ export function AppContent() {
       !["1H", "2H", "HT", "LIVE"].includes(match.fixture.status.short)
     );
   });
-  
- return (
+
+  return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#121212" }}>
       {loading ? (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <View
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
           <Text style={{ fontSize: 36, color: "#fff" }}></Text>
         </View>
       ) : (
@@ -258,7 +271,9 @@ export function AppContent() {
             >
               WaraScore
             </Text>
-            <View style={{ flexDirection: "row", marginRight: 20, padding: 10 }}>
+            <View
+              style={{ flexDirection: "row", marginRight: 20, padding: 10 }}
+            >
               <TouchableOpacity onPress={() => router.push("/favoris")}>
                 <Ionicons name="notifications" size={24} color="#FFF" />
               </TouchableOpacity>
@@ -277,7 +292,8 @@ export function AppContent() {
                     onPress={() => setSelectedDate(item.value)}
                     style={{
                       width: 100,
-                      backgroundColor: item.value === selectedDate ? "#f33" : "#333",
+                      backgroundColor:
+                        item.value === selectedDate ? "#f33" : "#333",
                       borderRadius: 10,
                       padding: 10,
                       marginLeft: 5,
@@ -286,10 +302,22 @@ export function AppContent() {
                       alignItems: "center",
                     }}
                   >
-                    <Text style={{ color: "white", fontSize: 13, fontWeight: "600" }}>
+                    <Text
+                      style={{
+                        color: "white",
+                        fontSize: 13,
+                        fontWeight: "600",
+                      }}
+                    >
                       {item.label.split(" ")[0]}
                     </Text>
-                    <Text style={{ color: "white", fontSize: 13, fontWeight: "600" }}>
+                    <Text
+                      style={{
+                        color: "white",
+                        fontSize: 13,
+                        fontWeight: "600",
+                      }}
+                    >
                       {item.label.split(" ")[1]}
                     </Text>
                   </TouchableOpacity>
@@ -312,7 +340,9 @@ export function AppContent() {
               </>
             )}
 
-            <Text style={[styles.title2, { marginTop: 20 }]}>Prochains Matchs</Text>
+            <Text style={[styles.title2, { marginTop: 20 }]}>
+              Prochains Matchs
+            </Text>
             <FlatList
               data={upcomingMatches}
               keyExtractor={(item) => item.fixture.id.toString()}
@@ -321,8 +351,12 @@ export function AppContent() {
                 <ScoreList item={item} onToggleFavorite={toggleFavorite} />
               )}
               ListEmptyComponent={() => (
-                <View style={{ width: "100%", alignItems: "center", padding: 10 }}>
-                  <Text style={{color: "#FFF", fontStyle: "italic"}}>Aucun match à venir</Text>
+                <View
+                  style={{ width: "100%", alignItems: "center", padding: 10 }}
+                >
+                  <Text style={{ color: "#FFF", fontStyle: "italic" }}>
+                    Aucun match à venir
+                  </Text>
                 </View>
               )}
             />
@@ -393,7 +427,7 @@ const LiveScore = ({ item }: { item: Match }) => {
     <View
       style={[
         styles.card,
-        { backgroundColor: "#222", borderColor: "#F73636", borderWidth: 1 },
+        { backgroundColor: "#222", borderColor: "#F73636", borderWidth: 1, width:400 },
       ]}
     >
       <View
@@ -494,50 +528,34 @@ const ScoreList = ({
 
   return (
     <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
-      <View style={[styles.card2, { backgroundColor: "#222", marginTop: 10 }]}>
-        <View style={styles.liveScoreBlock}>
-          <View style={{ width: "10%" }}></View>
-          <View style={{ width: "70%" }}>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                marginLeft: -40,
-              }}
-            >
+      <View style={styles.card2}>
+        <View style={styles.scoreListContainer}>
+          <View style={styles.scoreListTeams}>
+            <View style={styles.scoreListTeamRow}>
               <Image
                 source={{ uri: item.teams.home.logo }}
-                style={{ width: 30, height: 37 }}
+                style={styles.scoreListLogo}
               />
               <Text numberOfLines={1} style={styles.teamName}>
                 {item.teams.home.name}
               </Text>
             </View>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                marginTop: 18,
-                marginLeft: -42,
-              }}
-            >
+            <View style={styles.scoreListTeamRow}>
               <Image
                 source={{ uri: item.teams.away.logo }}
-                style={{ width: 33, height: 37 }}
+                style={styles.scoreListLogo}
               />
               <Text numberOfLines={1} style={styles.teamName}>
                 {item.teams.away.name}
               </Text>
             </View>
           </View>
-          <View style={{ width: "10%" }}>
-            <Text style={{ color: "#fff", marginTop: 2, marginLeft: -10 }}>
+
+          <View style={styles.scoreListMeta}>
+            <Text style={{ color: "#fff", marginBottom: 8, fontSize: 14 }}>
               {time}
             </Text>
-            <TouchableOpacity
-              onPress={() => onToggleFavorite(item, isFav)}
-              style={{ marginTop: 19, marginLeft: -7 }}
-            >
+            <TouchableOpacity onPress={() => onToggleFavorite(item, isFav)}>
               <Ionicons
                 name={isFav ? "notifications-circle" : "notifications-outline"}
                 size={30}
@@ -564,11 +582,10 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   card2: {
-    backgroundColor: "#1E1E1E",
+    backgroundColor: "#222",
     borderRadius: 10,
     marginHorizontal: 10,
-    width: "95%",
-    marginLeft: 10,
+    marginTop: 10,
   },
   league: {
     color: "#ffffff",
@@ -603,7 +620,6 @@ const styles = StyleSheet.create({
   logoTop: {
     width: 28,
     height: 28,
-  
   },
   scoreLiveTeamName: {
     fontSize: 18,
@@ -613,7 +629,6 @@ const styles = StyleSheet.create({
   },
   teamName: {
     color: "white",
-    marginLeft: 8,
     fontSize: 16,
     fontWeight: "bold",
   },
@@ -629,5 +644,30 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
     textAlign: "center",
+  },
+  scoreListContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+  },
+  scoreListTeams: {
+    flex: 1,
+    marginRight: 10,
+  },
+  scoreListTeamRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  scoreListLogo: {
+    width: 28,
+    height: 28,
+    marginRight: 12,
+  },
+  scoreListMeta: {
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

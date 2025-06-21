@@ -1,13 +1,19 @@
 import React from "react";
-import { View, Text, StyleSheet, ImageBackground } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ImageBackground,
+  Dimensions,
+} from "react-native";
 
 interface Player {
   id: number;
   name: string;
   number: number;
-  pos: string; 
+  pos: string;
   x: number;
-  y: number; 
+  y: number;
 }
 
 interface TeamCompositionFieldProps {
@@ -19,20 +25,44 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
   homeTeam = [],
   awayTeam = [],
 }) => {
-  
-  const filterByPos = (team: Player[], pos: string) =>
-    team.filter((p) => p.pos === pos); 
+  const renderPlayer = (player: Player, isHome: boolean) => {
+    if (!player.y || !player.x) {
+      return null;
+    }
 
-  const renderLine = (players: Player[]) => (
-    <View style={styles.line}>
-      {players.map((p) => (
-        <View key={p.id} style={styles.playerContainer}>
-          <Text style={styles.playerNumber}>{p.number}</Text>
-          <Text style={styles.playerName}>{p.name}</Text>
-        </View>
-      ))}
-    </View>
-  );
+    const team = isHome ? homeTeam : awayTeam;
+    const playersInRow = team.filter((p) => p.y === player.y);
+    const numPlayersInRow = playersInRow.length;
+
+    const top = isHome ? `${0 + player.y * 7}%` : `${97 - player.y * 8}%`;
+
+    const widthFactor = 120;
+    const offset = (100 - widthFactor) / 2;
+
+    const position = offset + (widthFactor / (numPlayersInRow + 1)) * player.x;
+
+    const left = isHome ? `${position}%` : `${100 - position}%`;
+
+    return (
+      <View
+        key={player.id}
+        style={[
+          styles.playerContainer,
+          {
+            position: "absolute",
+            top: top as any,
+            left: left as any,
+            transform: [{ translateX: -30 }],
+          },
+        ]}
+      >
+        <Text style={styles.playerNumber}>{player.number}</Text>
+        <Text style={styles.playerName}>
+          {player.name} {player.pos}{" "}
+        </Text>
+      </View>
+    );
+  };
 
   return (
     <ImageBackground
@@ -40,21 +70,8 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
       style={styles.field}
       resizeMode="cover"
     >
-      <View style={styles.halfField}>
-        {/* Équipe Home : F - M - D - G */}
-        {renderLine(filterByPos(homeTeam, "F"))}
-        {renderLine(filterByPos(homeTeam, "M"))}
-        {renderLine(filterByPos(homeTeam, "D"))}
-        {renderLine(filterByPos(homeTeam, "G"))}
-      </View>
-
-      <View style={styles.halfField}>
-        {/* Équipe Away : G - D - M - F */}
-        {renderLine(filterByPos(awayTeam, "G"))}
-        {renderLine(filterByPos(awayTeam, "D"))}
-        {renderLine(filterByPos(awayTeam, "M"))}
-        {renderLine(filterByPos(awayTeam, "F"))}
-      </View>
+      {homeTeam.map((p) => renderPlayer(p, true))}
+      {awayTeam.map((p) => renderPlayer(p, false))}
     </ImageBackground>
   );
 };
@@ -68,28 +85,26 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     position: "relative",
     overflow: "hidden",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-  },
-  halfField: {
-    flex: 1,
-    justifyContent: "space-around",
-  },
-  line: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
   },
   playerContainer: {
     alignItems: "center",
+    width: 60,
   },
   playerNumber: {
-    color: "#fff",
+    color: "red",
     fontWeight: "bold",
+    //backgroundColor: "rgba(0,0,0,0.6)",
+    borderRadius: 12,
+    width: 24,
+    textAlign: "center",
+    overflow: "hidden",
+    fontSize:10
   },
   playerName: {
-    color: "#fff",
-    fontSize: 12,
+    color: "#000",
+    fontSize: 10,
     textAlign: "center",
+    borderRadius: 4,
+    //backgroundColor: "rgba(0,0,0,0.6)",
   },
 });

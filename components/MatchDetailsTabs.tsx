@@ -12,6 +12,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import TeamCompositionField from "./TeamCompositionField";
+import LivePrediction from '../components/LivePrediction';
 
 interface Team {
   id: number;
@@ -124,7 +125,7 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
 
   const [matchDetails, setMatchDetails] = useState<MatchDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("details");
+  const [activeTab, setActiveTab] = useState("resume");
 
   const [composition, setComposition] = useState<{
     home: LineupPlayer[];
@@ -425,17 +426,17 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
             <TouchableOpacity
               style={[
                 styles.tabButton,
-                activeTab === "details" && styles.activeTab,
+                activeTab === "resume" && styles.activeTab,
               ]}
-              onPress={() => setActiveTab("details")}
+              onPress={() => setActiveTab("resume")}
             >
               <Text
                 style={[
                   styles.tabText,
-                  activeTab === "details" && styles.activeTabText,
+                  activeTab === "resume" && styles.activeTabText,
                 ]}
               >
-                Détails
+                Résumé
               </Text>
             </TouchableOpacity>
 
@@ -472,7 +473,25 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
                 Compos
               </Text>
             </TouchableOpacity>
+             
+                 <TouchableOpacity
+      style={[
+        styles.tabButton,
+        activeTab === "prono" && styles.activeTab,
+      ]}
+      onPress={() => setActiveTab("prono")}
+    >
+      <Text
+        style={[
+          styles.tabText,
+          activeTab === "prono" && styles.activeTabText,
+        ]}
+      >
+        Prono
+      </Text>
+    </TouchableOpacity>
 
+  
             {classement && classement.length > 0 && (
               <TouchableOpacity
                 style={[
@@ -513,29 +532,212 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
       </View>
 
       <View style={{ flex: 1 }}>
-        {activeTab === "details" && (
-          <ScrollView>
-            <View>
-              <Text style={styles.heading}>Détails du Match</Text>
-              <Text style={styles.info}>
-                Stade : {venue?.name}, {venue?.city}
+{activeTab === "resume" && (
+  <ScrollView style={styles.tabContent}>
+    {events.length === 0 ? (
+      <Text
+        style={{
+          padding: 10,
+          fontStyle: "italic",
+          color: "white",
+          marginLeft: 38,
+        }}
+      >
+        Aucun résumé à afficher pour l'instant.
+      </Text>
+    ) : (
+      (() => {
+        const sortedEvents = [...events].sort(
+          (a, b) => (a.time?.elapsed ?? 0) - (b.time?.elapsed ?? 0)
+        );
+        const firstHalfEvents = sortedEvents.filter(
+          (e) => (e.time?.elapsed ?? 0) <= 60
+        );
+        const secondHalfEvents = sortedEvents.filter(
+          (e) => (e.time?.elapsed ?? 0) > 60 && (e.time?.elapsed ?? 0) <= 120
+        );
+        const extraTimeEvents = sortedEvents.filter(
+          (e) => (e.time?.elapsed ?? 0) > 120
+        );
+
+        const renderEvent = (event, index) => {
+          const minute = event.time?.elapsed ?? 0;
+          const playerIn = event.player?.name || "";
+          const playerOut = event.assist?.name || "";
+          const teamName = event.team?.name || "";
+          const detail = event.detail || "";
+
+          let actionText = "";
+          let icon = "";
+          let textColor = "white";
+
+          switch (event.type) {
+            case "Goal":
+              if (
+                detail.toLowerCase().includes("own goal") ||
+                detail.toLowerCase().includes("csc")
+              ) {
+                icon = "🥅 ";
+                actionText = `But contre son camp`;
+                textColor = "orange";
+              } else if (detail.toLowerCase().includes("penalty")) {
+                icon = "⚽ ";
+                actionText = `But sur penalty`;
+              } else {
+                icon = "⚽ ";
+                actionText = `But`;
+              }
+              break;
+            case "Substitution":
+              icon = "🔁 ";
+              actionText = `Changement : ${playerOut} ➜ ${playerIn}`;
+              break;
+            case "Card":
+              if (detail === "Red Card") {
+                icon = "🟥 ";
+                actionText = `Carton Rouge`;
+                textColor = "red";
+              } else if (detail === "Yellow Card") {
+                icon = "🟨 ";
+                actionText = `Carton Jaune`;
+              } else {
+                icon = "🟧 ";
+                actionText = `Carton ${detail}`;
+              }
+              break;
+            case "Var":
+              icon = "🧐 ";
+              actionText = `VAR - ${detail}`;
+              break;
+            case "Penalty":
+              icon = "🎯 ";
+              actionText = `Penalty - ${detail}`;
+              break;
+            case "Injury":
+              icon = "🚑 ";
+              actionText = `Blessure`;
+              break;
+            case "Offside":
+              icon = "🚩 ";
+              actionText = `Hors-jeu`;
+              break;
+            default:
+              icon = "";
+              actionText = `${event.type} - ${detail}`;
+          }
+
+          return (
+            <Text key={index} style={{ paddingVertical: 5, paddingHorizontal: 10 }}>
+              <Text style={{ color: "red" }}>{minute}' </Text>
+              <Text style={{ color: textColor }}>
+                {icon}
+                {actionText}{" "}
               </Text>
-              {broadcasters && broadcasters.length > 0 ? (
-                <Text style={styles.info}>
-                  Chaîne :{" "}
-                  {broadcasters.map((b: { name: string }) => b.name).join(", ")}
-                </Text>
-              ) : (
-                <Text style={styles.info}>Chaîne : Non disponible</Text>
+              {event.type !== "Substitution" && event.type !== "Injury" && (
+                <Text style={{ color: "white" }}>{playerIn}</Text>
               )}
-            </View>
-          </ScrollView>
-        )}
+              <Text style={{ color: "gray" }}>
+                {teamName ? ` (${teamName})` : ""}
+              </Text>
+            </Text>
+          );
+        };
+
+        return (
+          <>
+            <Text
+              style={{
+                textAlign: "center",
+                marginVertical: 10,
+                fontWeight: "bold",
+                color: "yellow",
+                fontSize: 18,
+              }}
+            >
+              1ère mi-temps
+            </Text>
+            {firstHalfEvents.length > 0 ? (
+              firstHalfEvents.map(renderEvent)
+            ) : (
+              <Text style={{ color: "gray", textAlign: "center", marginBottom: 10 }}>
+                Aucun événement
+              </Text>
+            )}
+
+            <Text
+              style={{
+                textAlign: "center",
+                marginVertical: 10,
+                fontWeight: "bold",
+                color: "yellow",
+                fontSize: 18,
+              }}
+            >
+              2ème mi-temps
+            </Text>
+            {secondHalfEvents.length > 0 ? (
+              secondHalfEvents.map(renderEvent)
+            ) : (
+              <Text style={{ color: "gray", textAlign: "center", marginBottom: 10 }}>
+                Aucun événement
+              </Text>
+            )}
+
+            {extraTimeEvents.length > 0 && (
+              <>
+                <Text
+                  style={{
+                    textAlign: "center",
+                    marginVertical: 10,
+                    fontWeight: "bold",
+                    color: "yellow",
+                    fontSize: 18,
+                  }}
+                >
+                  Prolongations / Temps additionnel supplémentaire
+                </Text>
+                {extraTimeEvents.map(renderEvent)}
+              </>
+            )}
+          </>
+        );
+      })()
+    )}
+  </ScrollView>
+)}
+
+{activeTab === "prono" && (
+  <ScrollView style={styles.tabContent}>
+    {matchDetails && (
+      (matchDetails.fixture.status.short === "LIVE" ||
+        matchDetails.fixture.status.short === "1H" ||
+        matchDetails.fixture.status.short === "2H" ||
+        matchDetails.fixture.status.short === "NS") && (
+        <LivePrediction
+          teamHome={matchDetails.teams.home.name}
+          teamAway={matchDetails.teams.away.name}
+          events={events}
+          matchStatus={matchDetails.fixture.status.short}
+          onResultCheck={() => {}}
+        />
+      )
+    )}
+
+    {!matchDetails && (
+      <Text style={{ padding: 10, color: "white", textAlign: "center" }}>
+        Aucune donnée de match disponible pour afficher un prono.
+      </Text>
+    )}
+  </ScrollView>
+)}
+
+
+
         {activeTab === "stats" &&
           (stats ? (
             <ScrollView>
               <View>
-                <Text style={styles.sectionTitle}>Statistiques</Text>
+                <Text style={styles.sectionTitle}></Text>
                 <StatRow
                   label="Possession de balle"
                   home={stats.possession.home}
@@ -627,6 +829,7 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
               </View>
             </ScrollView>
           ))}
+          
         {activeTab === "historique" &&
           (historiqueLoading ? (
             <ActivityIndicator
@@ -875,17 +1078,20 @@ const styles = StyleSheet.create({
   // Onglets
   tabsContainer: {
     flexDirection: "row",
-    marginTop: 0,
-    marginBottom: 10,
+    marginTop: -15,
+    marginBottom: 5,
     borderBottomWidth: 1,
     borderBottomColor: "#444",
     height: 50,
   },
   tabButton: {
     paddingVertical: 10,
-    paddingHorizontal: 15,
+    paddingHorizontal: 13,
     borderBottomWidth: 3,
     borderBottomColor: "transparent",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100%"
   },
   sectionTitle: {
     color: "#f33",
@@ -896,7 +1102,7 @@ const styles = StyleSheet.create({
   activeTab: {
     borderBottomColor: "#FFFFFF",
     borderBottomWidth: 2,
-    paddingHorizontal: 5,
+    paddingHorizontal: 3,
     alignSelf: "center",
   },
   tabText: {
@@ -907,7 +1113,6 @@ const styles = StyleSheet.create({
   activeTabText: {
     color: "#aaa",
     fontWeight: "700",
-    fontSize: 18,
   },
   heading: {
     fontSize: 18,
@@ -1022,6 +1227,6 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   compositionScroll: {
-    paddingBottom: 40,
+    paddingBottom: 30,
   },
 });

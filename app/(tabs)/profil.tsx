@@ -4,6 +4,7 @@ import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-ic
 import { useRouter } from 'expo-router';
 import { Octicons } from '@expo/vector-icons';
 
+
 export default function SettingsScreen() {
   const router = useRouter();
 
@@ -37,11 +38,19 @@ export default function SettingsScreen() {
   <Ionicons name="chevron-forward" size={20} color="gray" />
 </TouchableOpacity>
 
-{/* Pronos */}
+{/* Programme */}
 <Text style={styles.sectionTitle}>Lien rapide</Text>
 <TouchableOpacity onPress={() => router.push('/paramater/programmeTV')} style={styles.row}>
   <MaterialCommunityIcons name="television-classic" size={22} color="white" />
   <Text style={styles.label}>Programme TV</Text>
+  <Ionicons name="chevron-forward" size={20} color="gray" />
+</TouchableOpacity>
+
+{/* Pronos */}
+<Text style={styles.sectionTitle}>Pronos</Text>
+<TouchableOpacity onPress={() => router.push('/paramater/pronos')} style={styles.row}>
+  <MaterialCommunityIcons name="clipboard-list" size={22} color="white" />
+  <Text style={styles.label}>Mes pronos</Text>
   <Ionicons name="chevron-forward" size={20} color="gray" />
 </TouchableOpacity>
 

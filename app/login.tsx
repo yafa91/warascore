@@ -80,7 +80,7 @@ export const options = {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000', // fond global noir
+    backgroundColor: '#000', 
     justifyContent: 'flex-start',
     alignItems: 'center',
     paddingHorizontal: 20,

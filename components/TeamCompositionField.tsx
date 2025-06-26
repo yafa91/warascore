@@ -21,6 +21,13 @@ interface TeamCompositionFieldProps {
   awayTeam: Player[];
 }
 
+const getShortName = (fullName: string): string => {
+  const parts = fullName.trim().split(" ");
+  if (parts.length === 1) return parts[0];
+  return parts[parts.length - 1].slice(0, 10);
+};
+
+
 const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
   homeTeam = [],
   awayTeam = [],
@@ -34,9 +41,11 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
     const playersInRow = team.filter((p) => p.y === player.y);
     const numPlayersInRow = playersInRow.length;
 
-    const top = isHome ? `${0 + player.y * 7}%` : `${97 - player.y * 8}%`;
+    const rowSpacing = 9; 
+    const top = isHome ? `${0 + player.y * rowSpacing}%` : `${98 - player.y * rowSpacing}%`;
 
-    const widthFactor = 120;
+
+    const widthFactor = 116;
     const offset = (100 - widthFactor) / 2;
 
     const position = offset + (widthFactor / (numPlayersInRow + 1)) * player.x;
@@ -52,14 +61,15 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
             position: "absolute",
             top: top as any,
             left: left as any,
-            transform: [{ translateX: -30 }],
+            transform: [{ translateX: -30 }, { translateY: 0 }],
+
           },
         ]}
       >
-        <Text style={styles.playerNumber}>{player.number}</Text>
-        <Text style={styles.playerName}>
-          {player.name} {player.pos}{" "}
-        </Text>
+    
+       <Text style={styles.playerName} numberOfLines={2}>
+        {player.number} {getShortName(player.name)}
+       </Text>
       </View>
     );
   };
@@ -89,22 +99,24 @@ const styles = StyleSheet.create({
   playerContainer: {
     alignItems: "center",
     width: 60,
+    paddingHorizontal: 0,
   },
   playerNumber: {
     color: "red",
     fontWeight: "bold",
     //backgroundColor: "rgba(0,0,0,0.6)",
-    borderRadius: 12,
+    borderRadius: 10,
     width: 24,
     textAlign: "center",
     overflow: "hidden",
-    fontSize:10
+    fontSize: 10,
   },
   playerName: {
     color: "#000",
-    fontSize: 10,
+    fontSize: 8,
     textAlign: "center",
-    borderRadius: 4,
+    fontWeight: "bold",
+    flexWrap: "wrap",
     //backgroundColor: "rgba(0,0,0,0.6)",
   },
 });

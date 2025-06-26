@@ -49,7 +49,6 @@ export default function ProgrammeTVScreen() {
           item.fixture.broadcasts.length > 0
       );
 
-      // Matchs à venir (aujourd'hui et demain)
       const upcomingRes = await axios.get(`${API_URL}?from=${today}&to=${tomorrow}`, {
         headers: { 'x-apisports-key': API_KEY },
       });
@@ -60,7 +59,7 @@ export default function ProgrammeTVScreen() {
           item.fixture.broadcasts.length > 0
       );
 
-      // Fusionner et trier par date
+    
       const allMatches = [...liveData, ...upcomingData].sort(
         (a, b) => new Date(a.fixture.date) - new Date(b.fixture.date)
       );

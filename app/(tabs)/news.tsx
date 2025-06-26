@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigation } from '@react-navigation/native'
+import { useNavigation } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -8,17 +8,27 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Image,
+  
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 
+const pronostiqueursMock = [
+  { id: '1', name: 'Alex', score: 124, avatar: 'https://i.pravatar.cc/150?img=1' },
+  { id: '2', name: 'Chloé', score: 117, avatar: 'https://i.pravatar.cc/150?img=2' },
+  { id: '3', name: 'Marc', score: 109, avatar: 'https://i.pravatar.cc/150?img=3' },
+  { id: '4', name: 'Léa', score: 105, avatar: 'https://i.pravatar.cc/150?img=4' },
+  { id: '5', name: 'Julien', score: 98, avatar: 'https://i.pravatar.cc/150?img=5' },
+];
 
 const News = () => {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('Tous');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const intervalRef = useRef(null);
   const navigation = useNavigation();
- 
+
   const fetchNews = () => {
     setLoading(true);
     let rssUrl = '';
@@ -29,6 +39,11 @@ const News = () => {
       rssUrl = 'https://www.football365.fr/feed';
     } else if (filter === 'Mercato') {
       rssUrl = 'https://rmcsport.bfmtv.com/rss/football/transferts/';
+    }
+
+    if (filter === 'Top Pronostiqueurs') {
+      setLoading(false);
+      return;
     }
 
     fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`)
@@ -71,8 +86,18 @@ const News = () => {
   }, [filter]);
 
   const renderItem = ({ item }) => {
-    const imageUrl =
-      item.thumbnail || (item.enclosure && item.enclosure.link) || null;
+    if (filter === 'Top Pronostiqueurs') {
+      return (
+        <View style={styles.pronostiqueurItem}>
+          <Text style={styles.rank}>{pronostiqueursMock.indexOf(item) + 1}</Text>
+          <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          <Text style={styles.pronostiqueurName}>{item.name}</Text>
+          <Text style={styles.pronostiqueurScore}>{item.score} pts</Text>
+        </View>
+      );
+    }
+
+    const imageUrl = item.thumbnail || (item.enclosure && item.enclosure.link) || null;
 
     return (
       <TouchableOpacity
@@ -106,14 +131,17 @@ const News = () => {
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.header}>Actualités</Text>
+      <View>
 
-      <View style={styles.tabsContainer}>
-        {['Tous', 'Tendances', 'Mercato'].map((tab) => (
+      <ScrollView showsHorizontalScrollIndicator={false} horizontal> 
+        <View style={styles.tabsContainer}>
+        {['Tous', 'Tendances', 'Mercato', 'Top Pronostiqueurs'].map((tab, index, array) => (
           <TouchableOpacity
             key={tab}
             style={[
               styles.tabButton,
               filter === tab && styles.tabButtonActive,
+              index !== array.length - 1 && styles.tabButtonSpacing,
             ]}
             onPress={() => setFilter(tab)}
           >
@@ -127,14 +155,31 @@ const News = () => {
             </Text>
           </TouchableOpacity>
         ))}
+        </View>
+      </ScrollView>
       </View>
+      
 
-      <FlatList
-        data={news}
-        keyExtractor={(item) => item.guid || item.link}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-      />
+      {filter === 'Top Pronostiqueurs' && !isLoggedIn ? (
+          <View style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'center', paddingTop: 150, paddingHorizontal: 20 }}>
+          <Text style={{ color: '#fff', fontSize: 16, marginBottom: 20, textAlign: 'center' }}>
+            Connecte-toi pour voir ton classement
+          </Text>
+          <TouchableOpacity
+            style={styles.loginButton}
+            onPress={() => navigation.navigate('login')}
+          >
+            <Text style={styles.loginButtonText}>Se connecter</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={filter === 'Top Pronostiqueurs' ? pronostiqueursMock : news}
+          keyExtractor={(item) => item.id || item.guid || item.link}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -172,6 +217,9 @@ const styles = StyleSheet.create({
   tabButtonTextActive: {
     color: '#fff',
   },
+  tabButtonSpacing: {
+    marginRight: 12,
+  },
   listContent: {
     paddingHorizontal: 16,
   },
@@ -197,6 +245,49 @@ const styles = StyleSheet.create({
   newsDate: {
     fontSize: 14,
     color: '#aaa',
+  },
+  pronostiqueurItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1e1e1e',
+    padding: 16,
+    marginBottom: 12,
+    borderRadius: 8,
+  },
+  rank: {
+    color: '#ffd700',
+    fontWeight: 'bold',
+    fontSize: 18,
+    width: 24,
+    textAlign: 'center',
+    marginRight: 12,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  pronostiqueurName: {
+    color: '#fff',
+    fontSize: 16,
+    flex: 1,
+  },
+  pronostiqueurScore: {
+    color: '#1e90ff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  loginButton: {
+    backgroundColor: '#4F46E5',
+    paddingVertical: 12,
+    paddingHorizontal: 40,
+    borderRadius: 25,
+  },
+  loginButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 

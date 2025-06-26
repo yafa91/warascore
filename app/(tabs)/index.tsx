@@ -327,7 +327,7 @@ export function AppContent() {
 
             {liveMatches.length > 0 && (
               <>
-                <Text style={styles.title2}>Live Now</Text>
+                <Text style={styles.title2}>En Direct</Text>
                 <View>
                   <FlatList
                     data={liveMatches.slice(0, 4)}
@@ -402,32 +402,34 @@ const LiveScore = ({ item }: { item: Match }) => {
   const elapsed = item.fixture.status.elapsed;
   const status = item.fixture.status.short;
 
-  const displayTime =
-    status === "INT"
-      ? "Interruption"
-      : status === "P"
-      ? "Tirs au but"
-      : status === "HT"
-      ? "Mi-temps"
-      : status === "1H" && elapsed !== null
-      ? elapsed > 45
-        ? `45+${elapsed - 45}’`
-        : `${elapsed}’`
-      : status === "2H" && elapsed !== null
-      ? elapsed > 90
-        ? `90+${elapsed - 90}’`
-        : elapsed === 90
-        ? `90+’`
-        : `${elapsed}’`
-      : elapsed !== null
-      ? `${elapsed}’`
-      : "";
+ const displayTime =
+  status === "INT"
+    ? "INT"
+    : status === "P"
+    ? "TAB"
+    : status === "HT"
+    ? "Mi-temps"
+    : status === "ET" && elapsed !== null
+    ? `Prol : ${elapsed}’`
+    : status === "1H" && elapsed !== null
+    ? elapsed > 45
+      ? `45+${elapsed - 45}’`
+      : `${elapsed}’`
+    : status === "2H" && elapsed !== null
+    ? elapsed > 90
+      ? `90+${elapsed - 90}’`
+      : elapsed === 90
+      ? `90+’`
+      : `${elapsed}’`
+    : elapsed !== null
+    ? `${elapsed}’`
+    : "";
 
   return (
     <View
       style={[
         styles.card,
-        { backgroundColor: "#222", borderColor: "#F73636", borderWidth: 1, width:400 },
+        { backgroundColor: "#222", borderColor: "#F73636", borderWidth: 1, width:329 },
       ]}
     >
       <View
@@ -474,7 +476,7 @@ const LiveScore = ({ item }: { item: Match }) => {
         </View>
 
         <View style={{ alignItems: "center" }}>
-          <Text style={{ color: "red", fontSize: 16, marginBottom: 6 }}>
+          <Text style={{ color: "red", fontSize: 20, marginBottom: 6}}>
             {displayTime}
           </Text>
 

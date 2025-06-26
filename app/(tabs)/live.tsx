@@ -271,21 +271,20 @@ useEffect(() => {
           </View>
 
           <View style={styles.centerBlock}>
-            <Text style={styles.time}>
+<Text style={styles.time}>
   {fixture.status.short === "HT"
     ? "Mi-temps"
     : fixture.status.short === "FT"
     ? "Terminé"
     : fixture.status.short === "INT"
     ? "Interrompu"
-    : fixture.status.short === "1H" && fixture.status.elapsed === 45
-    ? "45'+"
-    : fixture.status.short === "2H" && fixture.status.elapsed === 90
-    ? "90'+"
+    : (fixture.status.long === "Extra Time" || fixture.status.long === "Prolongation" || (fixture.status.elapsed !== null && fixture.status.elapsed > 90))
+    ? `Prol : ${fixture.status.elapsed}'`
     : fixture.status.elapsed !== null
     ? `${fixture.status.elapsed}'`
-    : fixture.status.short}
+    : "En attente"}
 </Text>
+
             <Text style={styles.score}>
               {goals.home} - {goals.away}
             </Text>

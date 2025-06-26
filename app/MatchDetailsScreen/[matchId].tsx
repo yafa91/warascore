@@ -214,7 +214,7 @@ export default function MatchDetails() {
 
     if (matchId) {
       fetchMatchDetails();
-      intervalId = setInterval(fetchMatchDetails, 30000);
+      intervalId = setInterval(fetchMatchDetails, 10000);
     }
 
     return () => clearInterval(intervalId);
@@ -268,12 +268,13 @@ const MatchCard = ({
     );
   });
 
+  
   const recentBigChance = events.some((event) => {
     return (
       (event.type === "Shot" || event.detail === "Big chance") &&
       event.time.elapsed !== null &&
       event.time.elapsed * 60 + (event.time.extra ?? 0) >=
-        secondsElapsed - 11 &&
+        secondsElapsed - 60 &&
       event.time.elapsed * 60 + (event.time.extra ?? 0) <= secondsElapsed
     );
   });
@@ -350,34 +351,37 @@ const MatchCard = ({
         <Text style={styles.league}>{league.name}</Text>
       </View>
 
-      <View style={styles.timeContainer}>
-        {fix.status.short === "HT" ? (
-          <Text style={styles.timeText}>Mi-temps</Text>
-        ) : ["SUSP", "PST", "ABD"].includes(fix.status.short) ? (
-          <Text style={styles.timeText}>Interrompu</Text>
-        ) : fix.status.short === "1H" ||
-          fix.status.short === "2H" ||
-          fix.status.short === "ET" ||
-          fix.status.short === "P" ||
-          fix.status.short === "LIVE" ? (
-          <Text style={styles.timeText}>
-            {currentMinute !== null ? `${currentMinute}'` : fix.status.long}
-          </Text>
-        ) : (
-          <Text style={styles.timeTextDate}>
-            {new Date(fix.date).toLocaleDateString([], {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-            })}{" "}
-            -{" "}
-            {new Date(fix.date).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </Text>
-        )}
-      </View>
+     <View style={styles.timeContainer}>
+  {fix.status.short === "HT" ? (
+    <Text style={styles.timeText}>Mi-temps</Text>
+  ) : ["INT", "PST", "ABD"].includes(fix.status.short) ? (
+    <Text style={styles.timeText}>Interrompu</Text>
+  ) : fix.status.short === "ET" ? (
+    <Text style={styles.timeText}>
+      {currentMinute !== null ? `Prolongation : ${currentMinute}'` : fix.status.long}
+    </Text>
+  ) : fix.status.short === "1H" ||
+    fix.status.short === "2H" ||
+    fix.status.short === "P" ||
+    fix.status.short === "LIVE" ? (
+    <Text style={styles.timeText}>
+      {currentMinute !== null ? `${currentMinute}'` : fix.status.long}
+    </Text>
+  ) : (
+    <Text style={styles.timeTextDate}>
+      {new Date(fix.date).toLocaleDateString([], {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })}{" "}
+      -{" "}
+      {new Date(fix.date).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}
+    </Text>
+  )}
+</View>
 
       <View style={styles.teamsRow}>
         <View style={styles.teamContainer}>
@@ -429,9 +433,11 @@ const MatchCard = ({
             </Text>
           ))}
         </View>
-        <View style={{ paddingHorizontal: 10 }}>
-          <Text>⚽</Text>
-        </View>
+       {(fixture.goals.home > 0 || fixture.goals.away > 0) && (
+       <View style={{ paddingHorizontal: 10 }}>
+       <Text>⚽</Text>
+       </View>
+        )}
 
         <View style={{ flex: 1 }}>
           {/* Buts extérieur */}
@@ -479,7 +485,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: "#222",
-    padding: 13,
+    padding: 9,
     borderRadius: 10,
     marginBottom: 20,
     marginLeft: -7,
@@ -533,7 +539,7 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: "#424242",
-    marginVertical: 9,
+    marginVertical: 19,
     width: "100%",
   },
   teamLogo: {
@@ -551,7 +557,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    flex: 2,
+    flex: 3,
   },
   score: {
     color: "#fff",

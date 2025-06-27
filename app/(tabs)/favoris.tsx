@@ -22,10 +22,10 @@ export default function FavorisPage() {
   const [error, setError] = useState<string | null>(null);
 
   const fadeAnim = useState(new Animated.Value(1))[0];
- 
+
   const handleCancelDelete = () => {
-  setMatchToDelete(null);
-};
+    setMatchToDelete(null);
+  };
 
   useEffect(() => {
     const blink = Animated.loop(
@@ -46,67 +46,68 @@ export default function FavorisPage() {
     return () => blink.stop();
   }, []);
 
-const handlePress = (fixtureId: number) => {
-router.push(`/MatchDetailsScreen/${fixtureId}`);
-};
+  const handlePress = (fixtureId: number) => {
+    router.push(`/MatchDetailsScreen/${fixtureId}`);
+  };
 
   const handleShowDeleteMessage = (matchId: number) => {
     setMatchToDelete(matchId);
   };
 
-const handleDelete = async () => {
-  if (matchToDelete !== null) {
-    const updatedFavorites = favorites.filter(fav => fav.fixture.id !== matchToDelete);
-    setFavorites(updatedFavorites);
-    setMatchToDelete(null);
-  }
-};
-
- const fixtureIdsRef = useRef<number[]>([]);
-
-const fetchMatchData = useCallback(async () => {
-  try {
-    setError(null);
-
-    fixtureIdsRef.current = favorites.map((fav) => fav.fixture.id);
-    if (fixtureIdsRef.current.length === 0) return;
-
-    const idsQuery = fixtureIdsRef.current.join("-");
-    const response = await fetch(`${API_URL}?ids=${idsQuery}`, {
-      headers: {
-        "x-apisports-key": API_KEY,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Erreur serveur : ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    if (data.response) {
-      const updatedFavorites = favorites.map((fav) => {
-        const updated = data.response.find(
-          (item) => item.fixture.id === fav.fixture.id
-        );
-        return updated || fav;
-      });
+  const handleDelete = async () => {
+    if (matchToDelete !== null) {
+      const updatedFavorites = favorites.filter(
+        (fav) => fav.fixture.id !== matchToDelete
+      );
       setFavorites(updatedFavorites);
+      setMatchToDelete(null);
     }
-  } catch (error) {
-    console.error("Erreur de mise à jour des favoris :", error);
-    setError("Impossible de mettre à jour les favoris.");
-  }
-}, []);
+  };
 
+  const fixtureIdsRef = useRef<number[]>([]);
 
- useEffect(() => {
-  fetchMatchData();
-  const interval = setInterval(() => {
+  const fetchMatchData = useCallback(async () => {
+    try {
+      setError(null);
+
+      fixtureIdsRef.current = favorites.map((fav) => fav.fixture.id);
+      if (fixtureIdsRef.current.length === 0) return;
+
+      const idsQuery = fixtureIdsRef.current.join("-");
+      const response = await fetch(`${API_URL}?ids=${idsQuery}`, {
+        headers: {
+          "x-apisports-key": API_KEY,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur serveur : ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.response) {
+        const updatedFavorites = favorites.map((fav) => {
+          const updated = data.response.find(
+            (item: any) => item.fixture.id === fav.fixture.id
+          );
+          return updated || fav;
+        });
+        setFavorites(updatedFavorites);
+      }
+    } catch (error) {
+      console.error("Erreur de mise à jour des favoris :", error);
+      setError("Impossible de mettre à jour les favoris.");
+    }
+  }, []);
+
+  useEffect(() => {
     fetchMatchData();
-  }, 20000);
-  return () => clearInterval(interval);
-}, []);
+    const interval = setInterval(() => {
+      fetchMatchData();
+    }, 20000);
+    return () => clearInterval(interval);
+  }, []);
 
   const sortedFavorites = [...favorites].sort((a, b) => {
     const liveStatus = ["1H", "2H", "LIVE"];
@@ -172,32 +173,34 @@ const fetchMatchData = useCallback(async () => {
                     <Text style={styles.teamName}>{item.teams.home.name}</Text>
                   </View>
 
-                      <View style={styles.vsContainer}>
-  {isUpcoming ? (
-    <Text style={styles.matchDate}>{formattedDate}</Text>
-  ) : item.fixture.status.short === "HT" ? (
-    <Text style={styles.halftimeText}>Mi-temps</Text>
-  ) : item.fixture.status.short === "INT" ? (
-    <Text style={styles.halftimeText}>Interruption</Text>
-  ) : item.fixture.status.short === "FT" || item.fixture.status.short === "AET" || item.fixture.status.short === "PEN" ? (
-    <>
-      <Text style={styles.finishedText}>Terminé</Text>
-      <Text style={styles.scoreText}>
-        {item.goals.home} - {item.goals.away}
-      </Text>
-    </>
-  ) : (
-    <>
-      <Text style={styles.liveTime}>
-        {item.fixture.status.elapsed}'
-      </Text>
-      <Text style={styles.scoreText}>
-        {item.goals.home} - {item.goals.away}
-      </Text>
-    </>
-  )}
-  {isUpcoming && <Text style={styles.vs}>VS</Text>}
-</View>
+                  <View style={styles.vsContainer}>
+                    {isUpcoming ? (
+                      <Text style={styles.matchDate}>{formattedDate}</Text>
+                    ) : item.fixture.status.short === "HT" ? (
+                      <Text style={styles.halftimeText}>Mi-temps</Text>
+                    ) : item.fixture.status.short === "INT" ? (
+                      <Text style={styles.halftimeText}>Interruption</Text>
+                    ) : item.fixture.status.short === "FT" ||
+                      item.fixture.status.short === "AET" ||
+                      item.fixture.status.short === "PEN" ? (
+                      <>
+                        <Text style={styles.finishedText}>Terminé</Text>
+                        <Text style={styles.scoreText}>
+                          {item.goals.home} - {item.goals.away}
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.liveTime}>
+                          {item.fixture.status.elapsed}'
+                        </Text>
+                        <Text style={styles.scoreText}>
+                          {item.goals.home} - {item.goals.away}
+                        </Text>
+                      </>
+                    )}
+                    {isUpcoming && <Text style={styles.vs}>VS</Text>}
+                  </View>
 
                   <View style={styles.teamContainer}>
                     <Image
@@ -213,7 +216,7 @@ const fetchMatchData = useCallback(async () => {
                     activeOpacity={0.7}
                   >
                     <MaterialIcons
-                      name="notifications"
+                      name="restore-from-trash"
                       size={24}
                       color="white"
                     />
@@ -373,11 +376,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   finishedText: {
-  color: "#EFECEC", 
-  fontSize: 15,
-  fontWeight: "bold",
-  marginBottom: 7,
-},
+    color: "#EFECEC",
+    fontSize: 15,
+    fontWeight: "bold",
+    marginBottom: 7,
+  },
   deleteButtonText: {
     color: "white",
     fontWeight: "600",
@@ -403,9 +406,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   halftimeText: {
-  color: "red",
-  fontSize: 15,
-  fontWeight: "bold",
-  marginBottom: 7,
-},
+    color: "red",
+    fontSize: 15,
+    fontWeight: "bold",
+    marginBottom: 7,
+  },
 });

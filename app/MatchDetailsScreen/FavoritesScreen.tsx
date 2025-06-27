@@ -1,9 +1,16 @@
 import React, { useContext, useEffect, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { ThemeContext } from "@/context/ThemeContext";
+import { useFavorites } from "@/context/FavoritesContext";
 
 type Match = {
   fixture: {
@@ -27,43 +34,9 @@ type Match = {
 };
 
 export default function FavoritesScreen() {
-  const [favoriteMatches, setFavoriteMatches] = useState<Match[]>([]);
+  const { favorites } = useFavorites();
   const { theme } = useContext(ThemeContext);
   const router = useRouter();
-
-  const fetchFavoriteMatches = async () => {
-    try {
-      const stored = await AsyncStorage.getItem("favorites");
-      const ids: number[] = stored ? JSON.parse(stored) : [];
-
-      if (ids.length === 0) {
-        setFavoriteMatches([]);
-        return;
-      }
-
-      const responses = await Promise.all(
-        ids.map((id) =>
-          fetch(`https://v3.football.api-sports.io/fixtures?id=${id}`, {
-            headers: {
-              "x-apisports-key": "b8b570d6f3ff7a8653dee3fb8922d929",
-            },
-          }).then((res) => res.json())
-        )
-      );
-
-      const matches = responses
-        .map((res) => res.response[0])
-        .filter((match) => !!match);
-
-      setFavoriteMatches(matches);
-    } catch (error) {
-      console.error("Erreur chargement favoris :", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchFavoriteMatches();
-  }, []);
 
   const renderMatch = ({ item }: { item: Match }) => {
     const time = new Date(item.fixture.date).toLocaleTimeString([], {
@@ -98,7 +71,7 @@ export default function FavoritesScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: "#121212" }}>
       <Text style={styles.header}>Favoris</Text>
       <FlatList
-        data={favoriteMatches}
+        data={favorites}
         keyExtractor={(item) => item.fixture.id.toString()}
         renderItem={renderMatch}
         ListEmptyComponent={

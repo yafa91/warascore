@@ -1,7 +1,5 @@
 import React, { useEffect, useState, useRef, useContext } from "react";
 import { Dimensions, Easing } from "react-native";
-import { removeFinishedMatchesFromFavorites } from "@/utils/favoriteUtils";
-import { FavoritesProvider } from "@/context/FavoritesContext";
 import {
   View,
   Text,
@@ -15,14 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { ThemeProvider, ThemeContext } from "@/context/ThemeContext";
 import { router, useRouter } from "expo-router";
-import {
-  addFavorite,
-  getFavorites,
-  isFavorite,
-  removeFavorite,
-} from "@/utils/favoriteUtils";
 import { useFavorites } from "@/context/FavoritesContext";
 
 interface Team {
@@ -64,11 +55,7 @@ const API_URL = "https://v3.football.api-sports.io/fixtures";
 const API_KEY = "b8b570d6f3ff7a8653dee3fb8922d929";
 
 export default function App() {
-  return (
-    <FavoritesProvider>
-      <AppContent />
-    </FavoritesProvider>
-  );
+  return <AppContent />;
 }
 
 const LiveBadge = () => {
@@ -118,12 +105,13 @@ export function AppContent() {
   const [selectedDate, setSelectedDate] = useState("");
   const [dates, setDates] = useState<{ label: string; value: string }[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
-  const { favorites, setFavorites, refreshFavorites } = useFavorites();
+  const {
+    favorites,
+    setFavorites,
+    refreshFavorites,
+    toggleFavorite: toggleFavoriteContext,
+  } = useFavorites();
   const scrollX = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    removeFinishedMatchesFromFavorites();
-  }, []);
 
   const getCurrentDate = () => new Date().toISOString().split("T")[0];
 
@@ -149,19 +137,9 @@ export function AppContent() {
     return newDates;
   };
 
-  const toggleFavorite = async (item: any, isFav: boolean) => {
+  const toggleFavorite = async (item: any) => {
     try {
-      if (isFav) {
-        const response = await removeFavorite(item);
-        if (response) {
-          await refreshFavorites();
-        }
-      } else {
-        const response = await addFavorite(item);
-        if (response) {
-          await refreshFavorites();
-        }
-      }
+      await toggleFavoriteContext(item);
     } catch (error) {
       console.error("Erreur lors de la modification des favoris:", error);
     }
@@ -402,34 +380,39 @@ const LiveScore = ({ item }: { item: Match }) => {
   const elapsed = item.fixture.status.elapsed;
   const status = item.fixture.status.short;
 
- const displayTime =
-  status === "INT"
-    ? "INT"
-    : status === "P"
-    ? "TAB"
-    : status === "HT"
-    ? "Mi-temps"
-    : status === "ET" && elapsed !== null
-    ? `Prol : ${elapsed}’`
-    : status === "1H" && elapsed !== null
-    ? elapsed > 45
-      ? `45+${elapsed - 45}’`
-      : `${elapsed}’`
-    : status === "2H" && elapsed !== null
-    ? elapsed > 90
-      ? `90+${elapsed - 90}’`
-      : elapsed === 90
-      ? `90+’`
-      : `${elapsed}’`
-    : elapsed !== null
-    ? `${elapsed}’`
-    : "";
+  const displayTime =
+    status === "INT"
+      ? "INT"
+      : status === "P"
+      ? "TAB"
+      : status === "HT"
+      ? "Mi-temps"
+      : status === "ET" && elapsed !== null
+      ? `Prol : ${elapsed}’`
+      : status === "1H" && elapsed !== null
+      ? elapsed > 45
+        ? `45+${elapsed - 45}’`
+        : `${elapsed}’`
+      : status === "2H" && elapsed !== null
+      ? elapsed > 90
+        ? `90+${elapsed - 90}’`
+        : elapsed === 90
+        ? `90+’`
+        : `${elapsed}’`
+      : elapsed !== null
+      ? `${elapsed}’`
+      : "";
 
   return (
     <View
       style={[
         styles.card,
-        { backgroundColor: "#222", borderColor: "#F73636", borderWidth: 1, width:329 },
+        {
+          backgroundColor: "#222",
+          borderColor: "#F73636",
+          borderWidth: 1,
+          width: 329,
+        },
       ]}
     >
       <View
@@ -476,7 +459,7 @@ const LiveScore = ({ item }: { item: Match }) => {
         </View>
 
         <View style={{ alignItems: "center" }}>
-          <Text style={{ color: "red", fontSize: 20, marginBottom: 6}}>
+          <Text style={{ color: "red", fontSize: 20, marginBottom: 6 }}>
             {displayTime}
           </Text>
 
@@ -511,7 +494,7 @@ const ScoreList = ({
   onToggleFavorite,
 }: {
   item: Match;
-  onToggleFavorite: (match: any, isFav: boolean) => void;
+  onToggleFavorite: (match: any) => void;
 }) => {
   const router = useRouter();
   const { isFavorite } = useFavorites();
@@ -524,6 +507,11 @@ const ScoreList = ({
     router.push(
       `MatchDetailsScreen/MatchDetailsScreen/DetailsPro/${item.fixture.id}`
     );
+  };
+
+  const handleFavoritePress = (e: any) => {
+    e.stopPropagation();
+    onToggleFavorite(item);
   };
 
   const isFav = isFavorite(item.fixture.id);
@@ -557,7 +545,7 @@ const ScoreList = ({
             <Text style={{ color: "#fff", marginBottom: 8, fontSize: 14 }}>
               {time}
             </Text>
-            <TouchableOpacity onPress={() => onToggleFavorite(item, isFav)}>
+            <TouchableOpacity onPress={handleFavoritePress}>
               <Ionicons
                 name={isFav ? "notifications-circle" : "notifications-outline"}
                 size={30}

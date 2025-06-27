@@ -25,7 +25,11 @@ const FavoritesContext = createContext<FavoritesContextType | undefined>(
   undefined
 );
 
-export const FavoritesProvider = ({ children }: { children: React.ReactNode }) => {
+export const FavoritesProvider = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
   const [favorites, setFavorites] = useState<any[]>([]);
 
   const refreshFavorites = useCallback(async () => {
@@ -40,47 +44,60 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
 
   const isFavorite = useCallback(
     (matchId: number) => {
-      return favorites.some((fav) => fav.fixture.id === matchId);
+      const result = favorites.some((fav) => fav.fixture.id === matchId);
+      console.log("🔍 Vérification favori pour match", matchId, ":", result);
+      return result;
     },
     [favorites]
   );
 
-  const toggleFavorite = useCallback(
-    async (match: any) => {
-      try {
-        const matchId = match.fixture.id;
-        const alreadyFav = isFavorite(matchId);
+  const toggleFavorite = useCallback(async (match: any) => {
+    try {
+      const matchId = match.fixture.id;
+      console.log("🔄 Toggle favori pour le match:", matchId);
+
+      setFavorites((prevFavorites) => {
+        const alreadyFav = prevFavorites.some(
+          (fav) => fav.fixture.id === matchId
+        );
+        console.log("📋 Match déjà en favori:", alreadyFav);
+        console.log("📋 Nombre de favoris actuels:", prevFavorites.length);
 
         let updatedFavorites;
         if (alreadyFav) {
-          updatedFavorites = favorites.filter((f) => f.fixture.id !== matchId);
+          updatedFavorites = prevFavorites.filter(
+            (f) => f.fixture.id !== matchId
+          );
+          console.log("🗑️ Match supprimé des favoris");
         } else {
-          updatedFavorites = [...favorites, match];
+          updatedFavorites = [...prevFavorites, match];
+          console.log("➕ Match ajouté aux favoris");
         }
 
-        setFavorites(updatedFavorites);
-        await saveFavorites(updatedFavorites);
-      } catch (error) {
-        console.error("❌ Erreur lors du toggle du favori:", error);
-      }
-    },
-    [favorites, isFavorite]
-  );
+        console.log("📋 Nouveau nombre de favoris:", updatedFavorites.length);
 
- const removeFavorite = useCallback(
-  async (matchId: number) => {
+        // Sauvegarder de manière asynchrone
+        saveFavorites(updatedFavorites);
+        return updatedFavorites;
+      });
+    } catch (error) {
+      console.error("❌ Erreur lors du toggle du favori:", error);
+    }
+  }, []);
+
+  const removeFavorite = useCallback(async (matchId: number) => {
     try {
-      const updatedFavorites = favorites.filter(
-        (fav) => fav.fixture.id !== matchId
-      );
-      setFavorites(updatedFavorites); 
-      await saveFavorites(updatedFavorites); 
+      setFavorites((prevFavorites) => {
+        const updatedFavorites = prevFavorites.filter(
+          (fav) => fav.fixture.id !== matchId
+        );
+        saveFavorites(updatedFavorites);
+        return updatedFavorites;
+      });
     } catch (error) {
       console.error("❌ Erreur lors de la suppression du favori:", error);
     }
-  },
-  [favorites]
-);
+  }, []);
 
   useEffect(() => {
     const init = async () => {

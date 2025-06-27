@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ImageBackground,
   Dimensions,
+  Image,
 } from "react-native";
 
 interface Player {
@@ -14,6 +15,7 @@ interface Player {
   pos: string;
   x: number;
   y: number;
+  photo?: string;
 }
 
 interface TeamCompositionFieldProps {
@@ -27,6 +29,7 @@ const getShortName = (fullName: string): string => {
   return parts[parts.length - 1].slice(0, 10);
 };
 
+const DEFAULT_PHOTO = require("../assets/players/default.jpg");
 
 const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
   homeTeam = [],
@@ -41,9 +44,10 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
     const playersInRow = team.filter((p) => p.y === player.y);
     const numPlayersInRow = playersInRow.length;
 
-    const rowSpacing = 9; 
-    const top = isHome ? `${0 + player.y * rowSpacing}%` : `${98 - player.y * rowSpacing}%`;
-
+    const rowSpacing = 9;
+    const top = isHome
+      ? `${0 + player.y * rowSpacing}%`
+      : `${98 - player.y * rowSpacing}%`;
 
     const widthFactor = 116;
     const offset = (100 - widthFactor) / 2;
@@ -51,7 +55,7 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
     const position = offset + (widthFactor / (numPlayersInRow + 1)) * player.x;
 
     const left = isHome ? `${position}%` : `${100 - position}%`;
-
+    console.log(player);
     return (
       <View
         key={player.id}
@@ -62,14 +66,25 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
             top: top as any,
             left: left as any,
             transform: [{ translateX: -30 }, { translateY: 0 }],
-
           },
         ]}
       >
-    
-       <Text style={styles.playerName} numberOfLines={2}>
-        {player.number} {getShortName(player.name)}
-       </Text>
+        {player.photo ? (
+          <Image
+            source={{ uri: player.photo }}
+            style={styles.playerPhoto}
+            resizeMode="cover"
+          />
+        ) : (
+          <Image
+            source={DEFAULT_PHOTO}
+            style={styles.playerPhoto}
+            resizeMode="cover"
+          />
+        )}
+        <Text style={styles.playerName} numberOfLines={2}>
+          {player.number} {getShortName(player.name)}
+        </Text>
       </View>
     );
   };
@@ -100,6 +115,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: 60,
     paddingHorizontal: 0,
+  },
+  playerPhoto: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginBottom: 2,
+    backgroundColor: "#eee",
   },
   playerNumber: {
     color: "red",

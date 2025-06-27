@@ -7,6 +7,7 @@ import { useNavigation, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useLayoutEffect } from "react";
 import { Share } from "react-native";
+import { useFavorites } from "@/context/FavoritesContext";
 
 import { TabView, SceneMap, TabBar } from "react-native-tab-view";
 import { Dimensions } from "react-native";
@@ -92,6 +93,7 @@ export default function MatchDetails() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const handleShare = async () => {
     try {
@@ -145,18 +147,30 @@ export default function MatchDetails() {
 
           {/* Bouton notification */}
           <TouchableOpacity
-            onPress={() => {
-              console.log("Match ajouté aux favoris ou notification activée");
+            onPress={async () => {
+              if (fixture) {
+                await toggleFavorite(fixture);
+              }
             }}
             style={{ marginLeft: 12 }}
           >
-            <Ionicons name="notifications-outline" size={24} color="white" />
+            <Ionicons
+              name={
+                fixture && isFavorite(fixture.fixture.id)
+                  ? "heart"
+                  : "heart-outline"
+              }
+              size={24}
+              color={
+                fixture && isFavorite(fixture.fixture.id) ? "red" : "white"
+              }
+            />
           </TouchableOpacity>
         </View>
       ),
       headerShown: true,
     });
-  }, [navigation, matchId]);
+  }, [navigation, matchId, fixture, isFavorite, toggleFavorite]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -268,7 +282,6 @@ const MatchCard = ({
     );
   });
 
-  
   const recentBigChance = events.some((event) => {
     return (
       (event.type === "Shot" || event.detail === "Big chance") &&
@@ -351,37 +364,39 @@ const MatchCard = ({
         <Text style={styles.league}>{league.name}</Text>
       </View>
 
-     <View style={styles.timeContainer}>
-  {fix.status.short === "HT" ? (
-    <Text style={styles.timeText}>Mi-temps</Text>
-  ) : ["INT", "PST", "ABD"].includes(fix.status.short) ? (
-    <Text style={styles.timeText}>Interrompu</Text>
-  ) : fix.status.short === "ET" ? (
-    <Text style={styles.timeText}>
-      {currentMinute !== null ? `Prolongation : ${currentMinute}'` : fix.status.long}
-    </Text>
-  ) : fix.status.short === "1H" ||
-    fix.status.short === "2H" ||
-    fix.status.short === "P" ||
-    fix.status.short === "LIVE" ? (
-    <Text style={styles.timeText}>
-      {currentMinute !== null ? `${currentMinute}'` : fix.status.long}
-    </Text>
-  ) : (
-    <Text style={styles.timeTextDate}>
-      {new Date(fix.date).toLocaleDateString([], {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      })}{" "}
-      -{" "}
-      {new Date(fix.date).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}
-    </Text>
-  )}
-</View>
+      <View style={styles.timeContainer}>
+        {fix.status.short === "HT" ? (
+          <Text style={styles.timeText}>Mi-temps</Text>
+        ) : ["INT", "PST", "ABD"].includes(fix.status.short) ? (
+          <Text style={styles.timeText}>Interrompu</Text>
+        ) : fix.status.short === "ET" ? (
+          <Text style={styles.timeText}>
+            {currentMinute !== null
+              ? `Prolongation : ${currentMinute}'`
+              : fix.status.long}
+          </Text>
+        ) : fix.status.short === "1H" ||
+          fix.status.short === "2H" ||
+          fix.status.short === "P" ||
+          fix.status.short === "LIVE" ? (
+          <Text style={styles.timeText}>
+            {currentMinute !== null ? `${currentMinute}'` : fix.status.long}
+          </Text>
+        ) : (
+          <Text style={styles.timeTextDate}>
+            {new Date(fix.date).toLocaleDateString([], {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+            })}{" "}
+            -{" "}
+            {new Date(fix.date).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </Text>
+        )}
+      </View>
 
       <View style={styles.teamsRow}>
         <View style={styles.teamContainer}>
@@ -415,9 +430,9 @@ const MatchCard = ({
           <Text style={styles.teamName}>{teams.away.name}</Text>
         </View>
       </View>
-      {homeGoals.length > 0 || awayGoals.length > 0 ? (
+      {((fixture.goals.home ?? 0) > 0 || (fixture.goals.away ?? 0) > 0) && (
         <View style={styles.separator} />
-      ) : null}
+      )}
 
       <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
         <View style={{ flex: 1 }}>
@@ -433,10 +448,10 @@ const MatchCard = ({
             </Text>
           ))}
         </View>
-       {(fixture.goals.home > 0 || fixture.goals.away > 0) && (
-       <View style={{ paddingHorizontal: 10 }}>
-       <Text>⚽</Text>
-       </View>
+        {(fixture.goals.home > 0 || fixture.goals.away > 0) && (
+          <View style={{ paddingHorizontal: 10 }}>
+            <Text>⚽</Text>
+          </View>
         )}
 
         <View style={{ flex: 1 }}>

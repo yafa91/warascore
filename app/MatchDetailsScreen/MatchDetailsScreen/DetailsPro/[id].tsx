@@ -14,17 +14,40 @@ import { Ionicons } from "@expo/vector-icons";
 import { ScrollView } from "react-native";
 import TeamCompositionField from "../../../../components/TeamCompositionField";
 import MatchDetailsTabs from "@/components/MatchDetailsTabs";
+import { useFavorites } from "@/context/FavoritesContext";
 
 const API_URL = "https://v3.football.api-sports.io";
 const API_KEY = "b8b570d6f3ff7a8653dee3fb8922d929";
 
 const windowWidth = Dimensions.get("window").width;
 
+interface MatchDetails {
+  fixture: {
+    id: number;
+    date: string;
+    status: { short: string; elapsed: number | null };
+  };
+  league: {
+    id: number;
+    name: string;
+    logo: string;
+  };
+  teams: {
+    home: { id: number; name: string; logo: string };
+    away: { id: number; name: string; logo: string };
+  };
+  goals: {
+    home: number;
+    away: number;
+  };
+}
+
 export default function DetailsPro() {
   const { id }: { id: string } = useLocalSearchParams();
   const navigation = useNavigation();
+  const { isFavorite, toggleFavorite, refreshFavorites } = useFavorites();
 
-  const [matchDetails, setMatchDetails] = useState(null);
+  const [matchDetails, setMatchDetails] = useState<MatchDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("details");
 
@@ -55,17 +78,41 @@ export default function DetailsPro() {
       ),
       headerRight: () => (
         <TouchableOpacity
-          onPress={() => {
-            console.log("Match ajouté aux favoris ou notification activée");
+          onPress={async () => {
+            if (
+              matchDetails &&
+              matchDetails.fixture &&
+              matchDetails.fixture.id
+            ) {
+              await toggleFavorite(matchDetails);
+            }
           }}
           style={{ marginRight: 10 }}
         >
-          <Ionicons name="notifications-outline" size={24} color="white" />
+          <Ionicons
+            name={
+              matchDetails &&
+              matchDetails.fixture &&
+              matchDetails.fixture.id &&
+              isFavorite(matchDetails.fixture.id)
+                ? "heart"
+                : "heart-outline"
+            }
+            size={24}
+            color={
+              matchDetails &&
+              matchDetails.fixture &&
+              matchDetails.fixture.id &&
+              isFavorite(matchDetails.fixture.id)
+                ? "red"
+                : "white"
+            }
+          />
         </TouchableOpacity>
       ),
       headerShown: true,
     });
-  }, [navigation]);
+  }, [navigation, matchDetails, isFavorite, toggleFavorite]);
 
   useEffect(() => {
     const fetchMatchDetails = async () => {
@@ -166,35 +213,34 @@ export default function DetailsPro() {
   }, [matchDetails]);
 
   const [events, setEvents] = useState([]);
-const [eventsLoading, setEventsLoading] = useState(true);
+  const [eventsLoading, setEventsLoading] = useState(true);
 
-useEffect(() => {
-  if (!matchDetails) return;
+  useEffect(() => {
+    if (!matchDetails) return;
 
-  const fetchEvents = async () => {
-    setEventsLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/fixtures/events?fixture=${id}`, {
-        headers: { "x-apisports-key": API_KEY },
-      });
-      const data = await res.json();
+    const fetchEvents = async () => {
+      setEventsLoading(true);
+      try {
+        const res = await fetch(`${API_URL}/fixtures/events?fixture=${id}`, {
+          headers: { "x-apisports-key": API_KEY },
+        });
+        const data = await res.json();
 
-      if (data.response && data.response.length > 0) {
-        setEvents(data.response);
-      } else {
+        if (data.response && data.response.length > 0) {
+          setEvents(data.response);
+        } else {
+          setEvents([]);
+        }
+      } catch (e) {
+        console.error("Erreur récupération des événements :", e);
         setEvents([]);
+      } finally {
+        setEventsLoading(false);
       }
-    } catch (e) {
-      console.error("Erreur récupération des événements :", e);
-      setEvents([]);
-    } finally {
-      setEventsLoading(false);
-    }
-  };
+    };
 
-  fetchEvents();
-}, [matchDetails, id]);
-
+    fetchEvents();
+  }, [matchDetails, id]);
 
   useEffect(() => {
     if (!matchDetails) return;
@@ -214,7 +260,7 @@ useEffect(() => {
         const data = await res.json();
 
         if (!data.response.length) {
-          setClassement([]); 
+          setClassement([]);
           setClassementError(false);
         } else {
           const standingsData = data.response[0].league.standings;
@@ -271,7 +317,6 @@ useEffect(() => {
     <View style={styles.container}>
       <MatchCard fixture={matchDetails} events={[]} />
 
-     
       <MatchDetailsTabs id={id} />
     </View>
   );
@@ -295,15 +340,23 @@ const MatchCard = ({ fixture, events }) => {
   const isLive = ["1H", "2H", "ET", "LIVE"].includes(fix.status.short);
 
   // Temps de jeu affiché uniquement si match en live
-  const gameTime = isLive && fix.status.elapsed !== null ? `${fix.status.elapsed}'` : "";
+  const gameTime =
+    isLive && fix.status.elapsed !== null ? `${fix.status.elapsed}'` : "";
 
   return (
-    <View style={[styles.card, { backgroundColor: "#222", borderColor: "#F73636", borderWidth: 1 }]}>
+    <View
+      style={[
+        styles.card,
+        { backgroundColor: "#222", borderColor: "#F73636", borderWidth: 1 },
+      ]}
+    >
       <Text style={styles.league}>{league.name}</Text>
 
       <View style={styles.timeContainer}>
         {fix.status.short === "HT" ? (
-          <Text style={[styles.timeText, { fontWeight: "bold", color: "#EFECEC" }]}>
+          <Text
+            style={[styles.timeText, { fontWeight: "bold", color: "#EFECEC" }]}
+          >
             Mi-temps
           </Text>
         ) : (
@@ -312,16 +365,19 @@ const MatchCard = ({ fixture, events }) => {
           </Text>
         )}
         {["FT", "AET", "PEN"].includes(fix.status.short) && (
-          <Text style={[styles.timeText, { color: "#EFECEC", fontWeight: "bold", marginTop: 4 }]}>
+          <Text
+            style={[
+              styles.timeText,
+              { color: "#EFECEC", fontWeight: "bold", marginTop: 4 },
+            ]}
+          >
             Terminé
           </Text>
         )}
       </View>
 
       {/* Affichage du temps de jeu uniquement si match en live */}
-      {gameTime !== "" && (
-        <Text style={styles.playTime}>{gameTime}</Text>
-      )}
+      {gameTime !== "" && <Text style={styles.playTime}>{gameTime}</Text>}
 
       <View style={styles.teamsRow}>
         <View style={styles.teamContainer}>
@@ -330,9 +386,13 @@ const MatchCard = ({ fixture, events }) => {
         </View>
 
         <View style={styles.scoreContainer}>
-          <Text style={styles.score}>{fix.status.short === "NS" ? "" : goals.home}</Text>
+          <Text style={styles.score}>
+            {fix.status.short === "NS" ? "" : goals.home}
+          </Text>
           <Text style={styles.scoreSeparator}> - </Text>
-          <Text style={styles.score}>{fix.status.short === "NS" ? "" : goals.away}</Text>
+          <Text style={styles.score}>
+            {fix.status.short === "NS" ? "" : goals.away}
+          </Text>
         </View>
 
         <View style={styles.teamContainer}>
@@ -342,12 +402,14 @@ const MatchCard = ({ fixture, events }) => {
       </View>
 
       <View style={{ marginTop: 10 }}>
-        {events.filter((e) => e.type === "Goal").map((event, index) => (
-          <Text key={index} style={styles.goalEvent}>
-            ⚽ {event.player.name} - {event.time.elapsed}'
-            {event.assist ? ` (Passeur: ${event.assist.name})` : ""}
-          </Text>
-        ))}
+        {events
+          .filter((e) => e.type === "Goal")
+          .map((event, index) => (
+            <Text key={index} style={styles.goalEvent}>
+              ⚽ {event.player.name} - {event.time.elapsed}'
+              {event.assist ? ` (Passeur: ${event.assist.name})` : ""}
+            </Text>
+          ))}
       </View>
     </View>
   );
@@ -370,7 +432,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
     marginLeft: -7,
-    marginRight: -7
+    marginRight: -7,
   },
   league: {
     fontSize: 16,
@@ -386,7 +448,7 @@ const styles = StyleSheet.create({
     color: "#bbb",
     fontSize: 14,
   },
-    playTime: {
+  playTime: {
     color: "#f33",
     fontWeight: "700",
     fontSize: 18,

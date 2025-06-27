@@ -12,7 +12,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import TeamCompositionField from "./TeamCompositionField";
-import LivePrediction from '../components/LivePrediction';
+import LivePrediction from "../components/LivePrediction";
 
 interface Team {
   id: number;
@@ -143,6 +143,8 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
   const [historiqueLoading, setHistoriqueLoading] = useState(false);
   const [historiqueError, setHistoriqueError] = useState(false);
 
+  const [playerPhotos, setPlayerPhotos] = useState<Record<number, string>>({});
+
   useEffect(() => {
     const fetchMatchDetails = async () => {
       try {
@@ -170,16 +172,16 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
           headers: { "x-apisports-key": API_KEY },
         });
         const data = await res.json();
-        console.log("Données de composition reçues :", data.response);
+        console.log("Réponse API lineups :", data);
 
         if (data.response.length === 0) {
           setComposition({ home: [], away: [] });
         } else {
           const homeTeam = data.response.find(
-            (team: TeamLineup) => team.team.id === matchDetails.teams.home.id
+            (team: any) => team.team.id === matchDetails.teams.home.id
           );
           const awayTeam = data.response.find(
-            (team: TeamLineup) => team.team.id === matchDetails.teams.away.id
+            (team: any) => team.team.id === matchDetails.teams.away.id
           );
 
           setComposition({
@@ -412,6 +414,30 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
     return () => clearInterval(intervalId);
   }, [id]);
 
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchPlayerPhotos = async () => {
+      try {
+        const res = await fetch(`${API_URL}/fixtures/players?fixture=${id}`, {
+          headers: { "x-apisports-key": API_KEY },
+        });
+        const data = await res.json();
+        const photos: Record<number, string> = {};
+        data.response.forEach((team: any) => {
+          team.players.forEach((p: any) => {
+            photos[p.player.id] = p.player.photo;
+          });
+        });
+        setPlayerPhotos(photos);
+      } catch (e) {
+        console.error("Erreur récupération photos joueurs :", e);
+      }
+    };
+
+    fetchPlayerPhotos();
+  }, [id]);
+
   const venue = matchDetails?.fixture.venue;
   const broadcasters = matchDetails?.broadcast;
 
@@ -473,25 +499,24 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
                 Compos
               </Text>
             </TouchableOpacity>
-             
-                 <TouchableOpacity
-      style={[
-        styles.tabButton,
-        activeTab === "prono" && styles.activeTab,
-      ]}
-      onPress={() => setActiveTab("prono")}
-    >
-      <Text
-        style={[
-          styles.tabText,
-          activeTab === "prono" && styles.activeTabText,
-        ]}
-      >
-        Prono
-      </Text>
-    </TouchableOpacity>
 
-  
+            <TouchableOpacity
+              style={[
+                styles.tabButton,
+                activeTab === "prono" && styles.activeTab,
+              ]}
+              onPress={() => setActiveTab("prono")}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === "prono" && styles.activeTabText,
+                ]}
+              >
+                Prono
+              </Text>
+            </TouchableOpacity>
+
             {classement && classement.length > 0 && (
               <TouchableOpacity
                 style={[
@@ -532,206 +557,223 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
       </View>
 
       <View style={{ flex: 1 }}>
-{activeTab === "resume" && (
-  <ScrollView style={styles.tabContent}>
-    {events.length === 0 ? (
-      <Text
-        style={{
-          padding: 10,
-          fontStyle: "italic",
-          color: "white",
-          marginLeft: 38,
-        }}
-      >
-        Aucun résumé à afficher pour l'instant.
-      </Text>
-    ) : (
-      (() => {
-        const sortedEvents = [...events].sort(
-          (a, b) => (a.time?.elapsed ?? 0) - (b.time?.elapsed ?? 0)
-        );
-        const firstHalfEvents = sortedEvents.filter(
-          (e) => (e.time?.elapsed ?? 0) <= 60
-        );
-        const secondHalfEvents = sortedEvents.filter(
-          (e) => (e.time?.elapsed ?? 0) > 60 && (e.time?.elapsed ?? 0) <= 120
-        );
-        const extraTimeEvents = sortedEvents.filter(
-          (e) => (e.time?.elapsed ?? 0) > 120
-        );
-
-        const renderEvent = (event, index) => {
-          const minute = event.time?.elapsed ?? 0;
-          const playerIn = event.player?.name || "";
-          const playerOut = event.assist?.name || "";
-          const teamName = event.team?.name || "";
-          const detail = event.detail || "";
-
-          let actionText = "";
-          let icon = "";
-          let textColor = "white";
-
-          switch (event.type) {
-            case "Goal":
-              if (
-                detail.toLowerCase().includes("own goal") ||
-                detail.toLowerCase().includes("csc")
-              ) {
-                icon = "🥅 ";
-                actionText = `But contre son camp`;
-                textColor = "orange";
-              } else if (detail.toLowerCase().includes("penalty")) {
-                icon = "⚽ ";
-                actionText = `But sur penalty`;
-              } else {
-                icon = "⚽ ";
-                actionText = `But`;
-              }
-              break;
-            case "Substitution":
-              icon = "🔁 ";
-              actionText = `Changement : ${playerOut} ➜ ${playerIn}`;
-              break;
-            case "Card":
-              if (detail === "Red Card") {
-                icon = "🟥 ";
-                actionText = `Carton Rouge`;
-                textColor = "red";
-              } else if (detail === "Yellow Card") {
-                icon = "🟨 ";
-                actionText = `Carton Jaune`;
-              } else {
-                icon = "🟧 ";
-                actionText = `Carton ${detail}`;
-              }
-              break;
-            case "Var":
-              icon = "🧐 ";
-              actionText = `VAR - ${detail}`;
-              break;
-            case "Penalty":
-              icon = "🎯 ";
-              actionText = `Penalty - ${detail}`;
-              break;
-            case "Injury":
-              icon = "🚑 ";
-              actionText = `Blessure`;
-              break;
-            case "Offside":
-              icon = "🚩 ";
-              actionText = `Hors-jeu`;
-              break;
-            default:
-              icon = "";
-              actionText = `${event.type} - ${detail}`;
-          }
-
-          return (
-            <Text key={index} style={{ paddingVertical: 5, paddingHorizontal: 10 }}>
-              <Text style={{ color: "red" }}>{minute}' </Text>
-              <Text style={{ color: textColor }}>
-                {icon}
-                {actionText}{" "}
+        {activeTab === "resume" && (
+          <ScrollView style={styles.tabContent}>
+            {events.length === 0 ? (
+              <Text
+                style={{
+                  padding: 10,
+                  fontStyle: "italic",
+                  color: "white",
+                  marginLeft: 38,
+                }}
+              >
+                Aucun résumé à afficher pour l'instant.
               </Text>
-              {event.type !== "Substitution" && event.type !== "Injury" && (
-                <Text style={{ color: "white" }}>{playerIn}</Text>
+            ) : (
+              (() => {
+                const sortedEvents = [...events].sort(
+                  (a, b) => (a.time?.elapsed ?? 0) - (b.time?.elapsed ?? 0)
+                );
+                const firstHalfEvents = sortedEvents.filter(
+                  (e) => (e.time?.elapsed ?? 0) <= 60
+                );
+                const secondHalfEvents = sortedEvents.filter(
+                  (e) =>
+                    (e.time?.elapsed ?? 0) > 60 && (e.time?.elapsed ?? 0) <= 120
+                );
+                const extraTimeEvents = sortedEvents.filter(
+                  (e) => (e.time?.elapsed ?? 0) > 120
+                );
+
+                const renderEvent = (event, index) => {
+                  const minute = event.time?.elapsed ?? 0;
+                  const playerIn = event.player?.name || "";
+                  const playerOut = event.assist?.name || "";
+                  const teamName = event.team?.name || "";
+                  const detail = event.detail || "";
+
+                  let actionText = "";
+                  let icon = "";
+                  let textColor = "white";
+
+                  switch (event.type) {
+                    case "Goal":
+                      if (
+                        detail.toLowerCase().includes("own goal") ||
+                        detail.toLowerCase().includes("csc")
+                      ) {
+                        icon = "🥅 ";
+                        actionText = `But contre son camp`;
+                        textColor = "orange";
+                      } else if (detail.toLowerCase().includes("penalty")) {
+                        icon = "⚽ ";
+                        actionText = `But sur penalty`;
+                      } else {
+                        icon = "⚽ ";
+                        actionText = `But`;
+                      }
+                      break;
+                    case "Substitution":
+                      icon = "🔁 ";
+                      actionText = `Changement : ${playerOut} ➜ ${playerIn}`;
+                      break;
+                    case "Card":
+                      if (detail === "Red Card") {
+                        icon = "🟥 ";
+                        actionText = `Carton Rouge`;
+                        textColor = "red";
+                      } else if (detail === "Yellow Card") {
+                        icon = "🟨 ";
+                        actionText = `Carton Jaune`;
+                      } else {
+                        icon = "🟧 ";
+                        actionText = `Carton ${detail}`;
+                      }
+                      break;
+                    case "Var":
+                      icon = "🧐 ";
+                      actionText = `VAR - ${detail}`;
+                      break;
+                    case "Penalty":
+                      icon = "🎯 ";
+                      actionText = `Penalty - ${detail}`;
+                      break;
+                    case "Injury":
+                      icon = "🚑 ";
+                      actionText = `Blessure`;
+                      break;
+                    case "Offside":
+                      icon = "🚩 ";
+                      actionText = `Hors-jeu`;
+                      break;
+                    default:
+                      icon = "";
+                      actionText = `${event.type} - ${detail}`;
+                  }
+
+                  return (
+                    <Text
+                      key={index}
+                      style={{ paddingVertical: 5, paddingHorizontal: 10 }}
+                    >
+                      <Text style={{ color: "red" }}>{minute}' </Text>
+                      <Text style={{ color: textColor }}>
+                        {icon}
+                        {actionText}{" "}
+                      </Text>
+                      {event.type !== "Substitution" &&
+                        event.type !== "Injury" && (
+                          <Text style={{ color: "white" }}>{playerIn}</Text>
+                        )}
+                      <Text style={{ color: "gray" }}>
+                        {teamName ? ` (${teamName})` : ""}
+                      </Text>
+                    </Text>
+                  );
+                };
+
+                return (
+                  <>
+                    <Text
+                      style={{
+                        textAlign: "center",
+                        marginVertical: 10,
+                        fontWeight: "bold",
+                        color: "yellow",
+                        fontSize: 18,
+                      }}
+                    >
+                      1ère mi-temps
+                    </Text>
+                    {firstHalfEvents.length > 0 ? (
+                      firstHalfEvents.map(renderEvent)
+                    ) : (
+                      <Text
+                        style={{
+                          color: "gray",
+                          textAlign: "center",
+                          marginBottom: 10,
+                        }}
+                      >
+                        Aucun événement
+                      </Text>
+                    )}
+
+                    <Text
+                      style={{
+                        textAlign: "center",
+                        marginVertical: 10,
+                        fontWeight: "bold",
+                        color: "yellow",
+                        fontSize: 18,
+                      }}
+                    >
+                      2ème mi-temps
+                    </Text>
+                    {secondHalfEvents.length > 0 ? (
+                      secondHalfEvents.map(renderEvent)
+                    ) : (
+                      <Text
+                        style={{
+                          color: "gray",
+                          textAlign: "center",
+                          marginBottom: 10,
+                        }}
+                      >
+                        Aucun événement
+                      </Text>
+                    )}
+
+                    {extraTimeEvents.length > 0 && (
+                      <>
+                        <Text
+                          style={{
+                            textAlign: "center",
+                            marginVertical: 10,
+                            fontWeight: "bold",
+                            color: "yellow",
+                            fontSize: 18,
+                          }}
+                        >
+                          Prolongations / Temps additionnel supplémentaire
+                        </Text>
+                        {extraTimeEvents.map(renderEvent)}
+                      </>
+                    )}
+                  </>
+                );
+              })()
+            )}
+          </ScrollView>
+        )}
+
+        {activeTab === "prono" && (
+          <ScrollView style={styles.tabContent}>
+            {matchDetails &&
+              (matchDetails.fixture.status.short === "LIVE" ||
+                matchDetails.fixture.status.short === "1H" ||
+                matchDetails.fixture.status.short === "2H" ||
+                matchDetails.fixture.status.short === "NS") && (
+                <LivePrediction
+                  matchId={matchDetails.fixture.id}
+                  teamHome={matchDetails.teams.home.name}
+                  teamAway={matchDetails.teams.away.name}
+                  events={events}
+                  matchStatus={matchDetails.fixture.status.short}
+                  onResultCheck={() => {}}
+                />
               )}
-              <Text style={{ color: "gray" }}>
-                {teamName ? ` (${teamName})` : ""}
-              </Text>
-            </Text>
-          );
-        };
 
-        return (
-          <>
-            <Text
-              style={{
-                textAlign: "center",
-                marginVertical: 10,
-                fontWeight: "bold",
-                color: "yellow",
-                fontSize: 18,
-              }}
-            >
-              1ère mi-temps
-            </Text>
-            {firstHalfEvents.length > 0 ? (
-              firstHalfEvents.map(renderEvent)
-            ) : (
-              <Text style={{ color: "gray", textAlign: "center", marginBottom: 10 }}>
-                Aucun événement
+            {!matchDetails && (
+              <Text
+                style={{ padding: 10, color: "white", textAlign: "center" }}
+              >
+                Aucune donnée de match disponible pour afficher un prono.
               </Text>
             )}
-
-            <Text
-              style={{
-                textAlign: "center",
-                marginVertical: 10,
-                fontWeight: "bold",
-                color: "yellow",
-                fontSize: 18,
-              }}
-            >
-              2ème mi-temps
-            </Text>
-            {secondHalfEvents.length > 0 ? (
-              secondHalfEvents.map(renderEvent)
-            ) : (
-              <Text style={{ color: "gray", textAlign: "center", marginBottom: 10 }}>
-                Aucun événement
-              </Text>
-            )}
-
-            {extraTimeEvents.length > 0 && (
-              <>
-                <Text
-                  style={{
-                    textAlign: "center",
-                    marginVertical: 10,
-                    fontWeight: "bold",
-                    color: "yellow",
-                    fontSize: 18,
-                  }}
-                >
-                  Prolongations / Temps additionnel supplémentaire
-                </Text>
-                {extraTimeEvents.map(renderEvent)}
-              </>
-            )}
-          </>
-        );
-      })()
-    )}
-  </ScrollView>
-)}
-
-{activeTab === "prono" && (
-  <ScrollView style={styles.tabContent}>
-    {matchDetails && (
-      (matchDetails.fixture.status.short === "LIVE" ||
-        matchDetails.fixture.status.short === "1H" ||
-        matchDetails.fixture.status.short === "2H" ||
-        matchDetails.fixture.status.short === "NS") && (
-        <LivePrediction
-          teamHome={matchDetails.teams.home.name}
-          teamAway={matchDetails.teams.away.name}
-          events={events}
-          matchStatus={matchDetails.fixture.status.short}
-          onResultCheck={() => {}}
-        />
-      )
-    )}
-
-    {!matchDetails && (
-      <Text style={{ padding: 10, color: "white", textAlign: "center" }}>
-        Aucune donnée de match disponible pour afficher un prono.
-      </Text>
-    )}
-  </ScrollView>
-)}
-
-
+          </ScrollView>
+        )}
 
         {activeTab === "stats" &&
           (stats ? (
@@ -820,16 +862,18 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
                   homeTeam={composition.home.map((p) => ({
                     ...p.player,
                     ...parseGrid(p.player.grid),
+                    photo: playerPhotos[p.player.id],
                   }))}
                   awayTeam={composition.away.map((p) => ({
                     ...p.player,
                     ...parseGrid(p.player.grid),
+                    photo: playerPhotos[p.player.id],
                   }))}
                 />
               </View>
             </ScrollView>
           ))}
-          
+
         {activeTab === "historique" &&
           (historiqueLoading ? (
             <ActivityIndicator
@@ -1091,7 +1135,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    height: "100%"
+    height: "100%",
   },
   sectionTitle: {
     color: "#f33",

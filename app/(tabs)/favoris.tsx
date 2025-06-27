@@ -11,6 +11,7 @@ import {
 import { useRouter } from "expo-router";
 import { useFavorites } from "@/context/FavoritesContext";
 import { MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 
 const API_URL = "https://v3.football.api-sports.io/fixtures";
 const API_KEY = "b8b570d6f3ff7a8653dee3fb8922d929";
@@ -18,14 +19,9 @@ const API_KEY = "b8b570d6f3ff7a8653dee3fb8922d929";
 export default function FavorisPage() {
   const { favorites, setFavorites, removeFavorite } = useFavorites();
   const router = useRouter();
-  const [matchToDelete, setMatchToDelete] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fadeAnim = useState(new Animated.Value(1))[0];
-
-  const handleCancelDelete = () => {
-    setMatchToDelete(null);
-  };
 
   useEffect(() => {
     const blink = Animated.loop(
@@ -50,18 +46,8 @@ export default function FavorisPage() {
     router.push(`/MatchDetailsScreen/${fixtureId}`);
   };
 
-  const handleShowDeleteMessage = (matchId: number) => {
-    setMatchToDelete(matchId);
-  };
-
-  const handleDelete = async () => {
-    if (matchToDelete !== null) {
-      const updatedFavorites = favorites.filter(
-        (fav) => fav.fixture.id !== matchToDelete
-      );
-      setFavorites(updatedFavorites);
-      setMatchToDelete(null);
-    }
+  const handleDirectDelete = async (matchId: number) => {
+    await removeFavorite(matchId);
   };
 
   const fixtureIdsRef = useRef<number[]>([]);
@@ -211,15 +197,11 @@ export default function FavorisPage() {
                   </View>
 
                   <TouchableOpacity
-                    onPress={() => handleShowDeleteMessage(item.fixture.id)}
+                    onPress={() => handleDirectDelete(item.fixture.id)}
                     style={styles.bellIconContainer}
                     activeOpacity={0.7}
                   >
-                    <MaterialIcons
-                      name="restore-from-trash"
-                      size={24}
-                      color="white"
-                    />
+                    <Ionicons name="trash" size={24} color="red" />
                   </TouchableOpacity>
 
                   {isLive && (
@@ -235,33 +217,6 @@ export default function FavorisPage() {
           })
         )}
       </ScrollView>
-
-      {matchToDelete !== null && (
-        <View style={styles.deleteMessageContainer}>
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={handleDelete}
-            activeOpacity={0.7}
-          >
-            <MaterialIcons
-              name="delete"
-              size={20}
-              color="red"
-              style={{ marginRight: 6 }}
-            />
-            <Text style={styles.deleteButtonText}>
-              Supprimer le match des favoris
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleCancelDelete}
-            style={styles.cancelButton}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.cancelButtonText}>Annuler</Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </View>
   );
 }

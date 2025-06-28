@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
-import Icon from "react-native-vector-icons/Feather";
 import { router } from "expo-router";
+import Feather from "@expo/vector-icons/Feather";
 import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -245,7 +245,7 @@ export default function LivePage() {
             <Text style={styles.league}>{league.name}</Text>
           </View>
           <TouchableOpacity onPress={() => toggleFavorite(item, isFav)}>
-            <Icon
+            <Feather
               name={isFav ? "bell-off" : "bell"}
               size={20}
               color={isFav ? "red" : "#fff"}

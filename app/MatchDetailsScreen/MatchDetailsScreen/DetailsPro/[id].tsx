@@ -95,8 +95,8 @@ export default function DetailsPro() {
               matchDetails.fixture &&
               matchDetails.fixture.id &&
               isFavorite(matchDetails.fixture.id)
-                ? "heart"
-                : "heart-outline"
+                ? "notifications"
+                : "notifications-outline"
             }
             size={24}
             color={

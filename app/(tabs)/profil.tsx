@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Octicons } from '@expo/vector-icons';
 
 
+
 export default function SettingsScreen() {
   const router = useRouter();
 
@@ -38,14 +39,6 @@ export default function SettingsScreen() {
   <Ionicons name="chevron-forward" size={20} color="gray" />
 </TouchableOpacity>
 
-{/* Programme */}
-<Text style={styles.sectionTitle}>Lien rapide</Text>
-<TouchableOpacity onPress={() => router.push('/paramater/programmeTV')} style={styles.row}>
-  <MaterialCommunityIcons name="television-classic" size={22} color="white" />
-  <Text style={styles.label}>Programme TV</Text>
-  <Ionicons name="chevron-forward" size={20} color="gray" />
-</TouchableOpacity>
-
 {/* Pronos */}
 <Text style={styles.sectionTitle}>Pronos</Text>
 <TouchableOpacity onPress={() => router.push('/paramater/pronos')} style={styles.row}>
@@ -60,6 +53,13 @@ export default function SettingsScreen() {
   <MaterialCommunityIcons name="tooltip-text" size={22} color="white" />
   <Text style={styles.label}>Votre avis nous interesse</Text>
   <Ionicons name="chevron-forward" size={20} color="gray" />
+</TouchableOpacity>
+
+{/* Mention */}
+<Text style={styles.sectionTitle}>A propos de WaraScore</Text>
+<TouchableOpacity onPress={() => router.push('/paramater/warascore')} style={styles.row}>
+  <Ionicons name="information-circle" size={22} color="white" />
+  <Text style={styles.label}>Mentions légales</Text>
 </TouchableOpacity>
     </View>
   );

@@ -4,15 +4,13 @@ import { useRoute } from "@react-navigation/native";
 import { TouchableOpacity } from "react-native";
 import axios from "axios";
 import { useNavigation, useRouter } from "expo-router";
+import { translateTeamName } from "../../utils/translateTeamName";
 import { Ionicons } from "@expo/vector-icons";
 import { useLayoutEffect } from "react";
 import { Share } from "react-native";
 import { useFavorites } from "@/context/FavoritesContext";
 
-import { TabView, SceneMap, TabBar } from "react-native-tab-view";
-import { Dimensions } from "react-native";
 
-import { useRef } from "react";
 
 import {
   View,
@@ -154,17 +152,16 @@ export default function MatchDetails() {
             }}
             style={{ marginLeft: 12 }}
           >
-            <Ionicons
-              name={
-                fixture && isFavorite(fixture.fixture.id)
-                  ? "heart"
-                  : "heart-outline"
-              }
-              size={24}
-              color={
-                fixture && isFavorite(fixture.fixture.id) ? "red" : "white"
-              }
-            />
+               <Ionicons
+  name={
+    fixture && isFavorite(fixture.fixture.id)
+      ? "notifications"
+      : "notifications-outline"
+  }
+  size={24}
+  color="white"
+/>
+
           </TouchableOpacity>
         </View>
       ),
@@ -266,7 +263,12 @@ const MatchCard = ({
   fixture: MatchDetails;
   events: Event[];
 }) => {
+  
+  const router = useRouter();
   const { teams, goals, league, fixture: fix } = fixture;
+
+  console.log(translateTeamName(teams.home.name)); 
+
 
   const now = new Date();
   const fixtureStartTime = new Date(fix.date);
@@ -318,25 +320,35 @@ const MatchCard = ({
   const isPenaltyShootout =
     fix.status.short === "P" || fix.status.long === "Penalty Shootout";
 
-  const homeGoals = events.filter(
-    (e) =>
-      e.type === "Goal" &&
-      e.team.id === teams.home.id &&
-      (!isPenaltyShootout || e.detail !== "Penalty")
+  const isPenaltyShootoutGoal = (e: Event) => {
+  return (
+    e.type === "Penalty" ||
+    (e.type === "Goal" &&
+      e.detail === "Penalty" &&
+      (e.time.elapsed === 0 || e.time.elapsed === null))
   );
+};
 
-  const awayGoals = events.filter(
-    (e) =>
-      e.type === "Goal" &&
-      e.team.id === teams.away.id &&
-      (!isPenaltyShootout || e.detail !== "Penalty")
-  );
+const homeGoals = events.filter(
+  (e) =>
+    e.type === "Goal" &&
+    e.team.id === teams.home.id &&
+    !isPenaltyShootoutGoal(e)
+);
+
+const awayGoals = events.filter(
+  (e) =>
+    e.type === "Goal" &&
+    e.team.id === teams.away.id &&
+    !isPenaltyShootoutGoal(e)
+);
+
 
   const groupGoalsByPlayer = (goals: Event[]) => {
     const grouped: Record<string, GoalInfo> = {};
 
     goals.forEach((goal) => {
-      const playerName = goal.player.name;
+      const playerName = goal.player?.name ?? "Inconnu";
       const minute =
         goal.time.elapsed + (goal.time.extra ? `+${goal.time.extra}` : "");
 
@@ -356,53 +368,70 @@ const MatchCard = ({
 
   const groupedHomeGoals = groupGoalsByPlayer(homeGoals);
   const groupedAwayGoals = groupGoalsByPlayer(awayGoals);
+  
 
-  return (
+ return (
     <View style={styles.card}>
       <View style={styles.leagueContainer}>
         <Image source={{ uri: league.logo }} style={styles.leagueLogo} />
-        <Text style={styles.league}>{league.name}</Text>
+          <TouchableOpacity
+          onPress={() => router.push(`/league/${league.id}`)}
+          >
+                <Text style={[styles.league, { color: "white" }]}>
+            {league.name}
+          </Text>
+        </TouchableOpacity>
       </View>
+     
+     <View style={styles.timeContainer}>
+  {fix.status.short === "HT" ? (
+    <Text style={styles.timeText}>Mi-temps</Text>
+  ) : ["INT", "PST", "ABD"].includes(fix.status.short) ? (
+    <Text style={styles.timeText}>Interrompu</Text>
+  ) : fix.status.short === "ET" && currentMinute === null ? (
+    <Text style={styles.timeText}>En attente</Text>
+  ) : fix.status.short === "ET" && currentMinute !== null ? (
+    <Text style={styles.timeText}>Prolongation : {currentMinute}'</Text>
+  ) : fix.status.short === "P" && currentMinute === null ? (
+    <Text style={styles.timeText}>TAB</Text>
+  ) : fix.status.short === "P" && currentMinute !== null ? (
+    <Text style={styles.timeText}>Tirs au but</Text>
+  ) : ["1H", "2H", "LIVE"].includes(fix.status.short) ? (
+    <Text style={styles.timeText}>
+      {currentMinute !== null ? `${currentMinute}'` : fix.status.long}
+    </Text>
+  ) : (
+    <Text style={styles.timeTextDate}>
+      {new Date(fix.date).toLocaleDateString([], {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })}{" "}
+      -{" "}
+      {new Date(fix.date).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}
+    </Text>
+  )}
+</View>
 
-      <View style={styles.timeContainer}>
-        {fix.status.short === "HT" ? (
-          <Text style={styles.timeText}>Mi-temps</Text>
-        ) : ["INT", "PST", "ABD"].includes(fix.status.short) ? (
-          <Text style={styles.timeText}>Interrompu</Text>
-        ) : fix.status.short === "ET" ? (
-          <Text style={styles.timeText}>
-            {currentMinute !== null
-              ? `Prolongation : ${currentMinute}'`
-              : fix.status.long}
-          </Text>
-        ) : fix.status.short === "1H" ||
-          fix.status.short === "2H" ||
-          fix.status.short === "P" ||
-          fix.status.short === "LIVE" ? (
-          <Text style={styles.timeText}>
-            {currentMinute !== null ? `${currentMinute}'` : fix.status.long}
-          </Text>
-        ) : (
-          <Text style={styles.timeTextDate}>
-            {new Date(fix.date).toLocaleDateString([], {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-            })}{" "}
-            -{" "}
-            {new Date(fix.date).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </Text>
-        )}
-      </View>
 
       <View style={styles.teamsRow}>
-        <View style={styles.teamContainer}>
-          <Image source={{ uri: teams.home.logo }} style={styles.teamLogo} />
-          <Text style={styles.teamName}>{teams.home.name}</Text>
-        </View>
+       <View style={styles.teamContainer}>
+  <TouchableOpacity onPress={() => router.push(`/team/${teams.home.id}`)}>
+    <Image source={{ uri: teams.home.logo }} style={styles.teamLogo} />
+  </TouchableOpacity>
+  <Text
+  style={styles.teamName}
+  numberOfLines={1}
+  adjustsFontSizeToFit
+  minimumFontScale={0.7} 
+>
+  {translateTeamName(teams.home.name)}
+</Text>
+
+</View>
 
         <View style={styles.scoreContainer}>
           <Text style={styles.score}>{goals.home ?? 0}</Text>
@@ -425,14 +454,27 @@ const MatchCard = ({
           </View>
         )}
 
-        <View style={styles.teamContainer}>
-          <Image source={{ uri: teams.away.logo }} style={styles.teamLogo} />
-          <Text style={styles.teamName}>{teams.away.name}</Text>
-        </View>
+
+       <View style={styles.teamContainer}>
+  <TouchableOpacity onPress={() => router.push(`/team/${teams.away.id}`)}>
+    <Image source={{ uri: teams.away.logo }} style={styles.teamLogo} />
+  </TouchableOpacity>
+  <Text
+  style={styles.teamName}
+  numberOfLines={1}
+  adjustsFontSizeToFit
+  minimumFontScale={0.7}
+>
+  {translateTeamName(teams.away.name)}
+</Text>
+
+
+</View>
       </View>
       {((fixture.goals.home ?? 0) > 0 || (fixture.goals.away ?? 0) > 0) && (
         <View style={styles.separator} />
       )}
+      
 
       <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
         <View style={{ flex: 1 }}>
@@ -444,7 +486,7 @@ const MatchCard = ({
             >
               {playerName} - {info.minutes.join(", ")}'
               {info.ownGoal && " (CSC)"}
-              {info.penalty && " (Penalty)"}
+              {info.penalty && " (P)"}
             </Text>
           ))}
         </View>
@@ -463,10 +505,13 @@ const MatchCard = ({
             >
               {playerName} - {info.minutes.join(", ")}'
               {info.ownGoal && " (CSC)"}
-              {info.penalty && " (Penalty)"}
+              {info.penalty && " (P)"}
             </Text>
           ))}
         </View>
+        
+        
+
       </View>
       {(recentGoal || recentBigChance) && (
         <View style={{ marginTop: 10 }}>
@@ -521,13 +566,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   leagueLogo: {
-    width: 25,
-    height: 25,
+    width: 20,
+    height: 36,
     marginRight: 10,
   },
   timeContainer: {
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 0,
   },
   timeText: {
     color: "red",
@@ -548,7 +593,7 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
   },
   teamContainer: {
-    flex: 4,
+    flex: 2,
     alignItems: "center",
   },
   separator: {
@@ -558,14 +603,17 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   teamLogo: {
-    width: 40,
-    height: 40,
+    width: 54,
+    height: 54,
     resizeMode: "contain",
-    marginBottom: 6,
+    marginBottom: 7,
   },
   teamName: {
     color: "#fff",
-    fontSize: 19,
+    fontSize: 16,
+    fontWeight: "bold",
+    maxWidth: 140,
+    flexShrink: 1,
     textAlign: "center",
   },
   scoreContainer: {

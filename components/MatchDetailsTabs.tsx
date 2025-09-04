@@ -10,8 +10,10 @@ import {
   Image,
 } from "react-native";
 import React, { useEffect, useState } from "react";
+import { translateTeamName } from "../utils/translateTeamName";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import TeamCompositionField from "./TeamCompositionField";
+import { FontAwesome } from '@expo/vector-icons';
 import LivePrediction from "../components/LivePrediction";
 
 interface Team {
@@ -138,6 +140,10 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
   const [classementError, setClassementError] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
+
+  const [statJoueurData, setStatJoueurData] = useState(null);
+  const [loadingStatJoueur, setLoadingStatJoueur] = useState(false);
+  const [errorStatJoueur, setErrorStatJoueur] = useState(null);
 
   const [historique, setHistorique] = useState<MatchDetails[]>([]);
   const [historiqueLoading, setHistoriqueLoading] = useState(false);
@@ -307,6 +313,30 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
   }, [matchDetails]);
 
   useEffect(() => {
+  if (activeTab === "statjoueur") {
+    setLoadingStatJoueur(true);
+    fetch(`${API_URL}?id=${id}`, {
+      headers: {
+        "x-apisports-key": API_KEY,
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.response && data.response.length > 0) {
+          setStatJoueurData(data.response[0].players || []);
+        } else {
+          setStatJoueurData([]);
+        }
+        setLoadingStatJoueur(false);
+      })
+      .catch((err) => {
+        setErrorStatJoueur("Erreur lors du chargement des stats joueurs");
+        setLoadingStatJoueur(false);
+      });
+  }
+}, [activeTab, id]);
+
+  useEffect(() => {
     let intervalId: any;
 
     const fetchMatchDetails = async () => {
@@ -465,7 +495,7 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
                 Résumé
               </Text>
             </TouchableOpacity>
-
+              
             <TouchableOpacity
               style={[
                 styles.tabButton,
@@ -516,6 +546,26 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
                 Prono
               </Text>
             </TouchableOpacity>
+           
+{statJoueurData?.length > 0 && (
+  <TouchableOpacity
+    style={[
+      styles.tabButton,
+      activeTab === "statjoueur" && styles.activeTab,
+    ]}
+    onPress={() => setActiveTab("statjoueur")}
+  >
+    <Text
+      style={[
+        styles.tabText,
+        activeTab === "statjoueur" && styles.activeTabText,
+      ]}
+    >
+      Stats joueurs
+    </Text>
+  </TouchableOpacity>
+)}
+
 
             {classement && classement.length > 0 && (
               <TouchableOpacity
@@ -576,102 +626,106 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
                   (a, b) => (a.time?.elapsed ?? 0) - (b.time?.elapsed ?? 0)
                 );
                 const firstHalfEvents = sortedEvents.filter(
-                  (e) => (e.time?.elapsed ?? 0) <= 60
+                  (e) => (e.time?.elapsed ?? 0) <= 45
                 );
                 const secondHalfEvents = sortedEvents.filter(
                   (e) =>
-                    (e.time?.elapsed ?? 0) > 60 && (e.time?.elapsed ?? 0) <= 120
+                    (e.time?.elapsed ?? 0) > 45 && (e.time?.elapsed ?? 0) <= 90
                 );
                 const extraTimeEvents = sortedEvents.filter(
                   (e) => (e.time?.elapsed ?? 0) > 120
                 );
 
-                const renderEvent = (event, index) => {
-                  const minute = event.time?.elapsed ?? 0;
-                  const playerIn = event.player?.name || "";
-                  const playerOut = event.assist?.name || "";
-                  const teamName = event.team?.name || "";
-                  const detail = event.detail || "";
+  const renderEvent = (event, index) => {
+  const minute = event.time?.elapsed ?? 0;
+  const player = event.player?.name || "";
+  const playerIn = event.player?.name || "";
+  const playerOut = event.assist?.name || "";
+  const teamName = event.team?.name || "";
+  const detail = event.detail || "";
 
-                  let actionText = "";
-                  let icon = "";
-                  let textColor = "white";
+  let comment = "";
+  let icon = "";
 
-                  switch (event.type) {
-                    case "Goal":
-                      if (
-                        detail.toLowerCase().includes("own goal") ||
-                        detail.toLowerCase().includes("csc")
-                      ) {
-                        icon = "🥅 ";
-                        actionText = `But contre son camp`;
-                        textColor = "orange";
-                      } else if (detail.toLowerCase().includes("penalty")) {
-                        icon = "⚽ ";
-                        actionText = `But sur penalty`;
-                      } else {
-                        icon = "⚽ ";
-                        actionText = `But`;
-                      }
-                      break;
-                    case "Substitution":
-                      icon = "🔁 ";
-                      actionText = `Changement : ${playerOut} ➜ ${playerIn}`;
-                      break;
-                    case "Card":
-                      if (detail === "Red Card") {
-                        icon = "🟥 ";
-                        actionText = `Carton Rouge`;
-                        textColor = "red";
-                      } else if (detail === "Yellow Card") {
-                        icon = "🟨 ";
-                        actionText = `Carton Jaune`;
-                      } else {
-                        icon = "🟧 ";
-                        actionText = `Carton ${detail}`;
-                      }
-                      break;
-                    case "Var":
-                      icon = "🧐 ";
-                      actionText = `VAR - ${detail}`;
-                      break;
-                    case "Penalty":
-                      icon = "🎯 ";
-                      actionText = `Penalty - ${detail}`;
-                      break;
-                    case "Injury":
-                      icon = "🚑 ";
-                      actionText = `Blessure`;
-                      break;
-                    case "Offside":
-                      icon = "🚩 ";
-                      actionText = `Hors-jeu`;
-                      break;
-                    default:
-                      icon = "";
-                      actionText = `${event.type} - ${detail}`;
-                  }
+  switch (event.type) {
+    case "Goal":
+      icon = "⚽️"; // ballon de foot
+      if (
+        detail.toLowerCase().includes("own goal") ||
+        detail.toLowerCase().includes("csc")
+      ) {
+        comment = `${minute}ème minute, but contre son camp pour ${teamName}`;
+      } else if (detail.toLowerCase().includes("penalty")) {
+        comment = `${minute}ème minute, penalty transformé par ${player} pour ${teamName}`;
+      } else {
+        comment = `${minute}ème minute, ${player} marque un but pour ${teamName}`;
+      }
+      break;
 
-                  return (
-                    <Text
-                      key={index}
-                      style={{ paddingVertical: 5, paddingHorizontal: 10 }}
-                    >
-                      <Text style={{ color: "red" }}>{minute}' </Text>
-                      <Text style={{ color: textColor }}>
-                        {icon}
-                        {actionText}{" "}
-                      </Text>
-                      {event.type !== "Substitution" &&
-                        event.type !== "Injury" && (
-                          <Text style={{ color: "white" }}>{playerIn}</Text>
-                        )}
-                      <Text style={{ color: "gray" }}>
-                        {teamName ? ` (${teamName})` : ""}
-                      </Text>
-                    </Text>
-                  );
-                };
+    case "Substitution":
+      icon = "🔄"; // flèches pour changement
+      comment = `${minute}ème minute, changement pour ${teamName} : ${playerOut} est remplacé par ${playerIn}`;
+      break;
+
+    case "Card":
+      if (detail === "Red Card") {
+        icon = "🟥"; // carré rouge
+        comment = `${minute}ème minute, carton rouge pour ${player} (${teamName})`;
+      } else if (detail === "Yellow Card") {
+        icon = "🟨"; // carré jaune
+        comment = `${minute}ème minute, carton jaune pour ${player} (${teamName})`;
+      } else {
+        icon = "🟦"; // carré bleu ou autre couleur pour les cartons spéciaux
+        comment = `${minute}ème minute, carton ${detail.toLowerCase()} pour ${player} (${teamName})`;
+      }
+      break;
+
+    case "Offside":
+      icon = "🚩"; // drapeau
+      comment = `${minute}ème minute, hors-jeu signalé pour ${player} (${teamName})`;
+      break;
+
+    case "Injury":
+      icon = "⚕️"; // symbole médical
+      comment = `${minute}ème minute, blessure pour ${player} (${teamName})`;
+      break;
+
+    case "Var":
+      icon = "📺"; // TV ou caméra
+      comment = `${minute}ème minute, intervention VAR : ${detail}`;
+      break;
+
+    case "Penalty":
+      icon = "🎯"; // cible
+      comment = `${minute}ème minute, penalty pour ${teamName} - ${detail}`;
+      break;
+
+    default:
+      icon = "🔄"; // info
+      comment = `${minute}ème minute, événement : ${event.type} (${detail}) pour ${teamName}`;
+  }
+
+
+  const isLeft = index % 2 === 0;
+
+  const containerStyle = {
+    alignSelf: isLeft ? "flex-start" : "flex-end",
+    backgroundColor: isLeft ? "#222244" : "#442222",
+    borderRadius: 10,
+    marginVertical: 5,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    maxWidth: "75%",
+    flexDirection: "row",
+    alignItems: "center",
+  };
+
+  return (
+    <Text key={index} style={[containerStyle, { color: "white" }]}>
+      {icon} {comment}
+    </Text>
+  );
+};
 
                 return (
                   <>
@@ -748,32 +802,87 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
           </ScrollView>
         )}
 
-        {activeTab === "prono" && (
-          <ScrollView style={styles.tabContent}>
-            {matchDetails &&
-              (matchDetails.fixture.status.short === "LIVE" ||
-                matchDetails.fixture.status.short === "1H" ||
-                matchDetails.fixture.status.short === "2H" ||
-                matchDetails.fixture.status.short === "NS") && (
-                <LivePrediction
-                  matchId={matchDetails.fixture.id}
-                  teamHome={matchDetails.teams.home.name}
-                  teamAway={matchDetails.teams.away.name}
-                  events={events}
-                  matchStatus={matchDetails.fixture.status.short}
-                  onResultCheck={() => {}}
-                />
-              )}
+{activeTab === "statjoueur" && hasStatJoueur && (
+  <ScrollView style={{ flex: 1, padding: 10, backgroundColor: "#111" }}>
+    {loadingStatJoueur ? (
+      <ActivityIndicator size="large" color="#f33" style={{ marginTop: 20 }} />
+    ) : errorStatJoueur ? (
+      <Text style={{ color: "red", textAlign: "center", marginTop: 20 }}>
+        {errorStatJoueur}
+      </Text>
+    ) : (
+      statJoueurData.map((player: any, index: number) => (
+        <View
+          key={index}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: 12,
+            padding: 10,
+            backgroundColor: "#222",
+            borderRadius: 8,
+          }}
+        >
+          <Image
+            source={{ uri: player.player.photo }}
+            style={{ width: 50, height: 50, borderRadius: 25, marginRight: 10 }}
+          />
+          <View>
+            <Text style={{ fontWeight: "bold", color: "#ff0", fontSize: 16 }}>
+              {player.player.name}
+            </Text>
+            <Text style={{ color: "white" }}>
+              Minutes jouées : {player.statistics?.[0]?.games?.minutes ?? "N/A"}
+            </Text>
+            <Text style={{ color: "white" }}>
+              Buts : {player.statistics?.[0]?.goals?.total ?? 0}
+            </Text>
+            <Text style={{ color: "white" }}>
+              Passes décisives : {player.statistics?.[0]?.passes?.assists ?? 0}
+            </Text>
+          </View>
+        </View>
+      ))
+    )}
+  </ScrollView>
+)}
 
-            {!matchDetails && (
-              <Text
-                style={{ padding: 10, color: "white", textAlign: "center" }}
-              >
-                Aucune donnée de match disponible pour afficher un prono.
-              </Text>
-            )}
-          </ScrollView>
-        )}
+
+{activeTab === "prono" && (
+  <ScrollView style={styles.tabContent}>
+    {matchDetails ? (
+      matchDetails.fixture.status.short === "LIVE" ||
+      matchDetails.fixture.status.short === "1H" ||
+      matchDetails.fixture.status.short === "2H" ||
+      matchDetails.fixture.status.short === "HT" ||
+      matchDetails.fixture.status.short === "INT" ||
+      matchDetails.fixture.status.short === "NS" ? (
+        <LivePrediction
+          matchId={matchDetails.fixture.id}
+          teamHome={matchDetails.teams.home.name}
+          teamAway={matchDetails.teams.away.name}
+          events={events}
+          matchStatus={matchDetails.fixture.status.short}
+          elapsed={matchDetails.fixture.status.elapsed}
+          onResultCheck={() => {}}
+        />
+      ) : (
+       <View style={{ alignItems: "center", padding: 20 }}>
+  <FontAwesome name="trophy" size={50} color="#FFD700" style={{ marginBottom: 10 }} />
+  <Text style={{ color: "white", textAlign: "center", fontSize: 16 }}>
+    Le match est terminé.{"\n"}
+    Rends-toi dans le menu "Profil" pour voir tes résultats dans la section "Mes Pronos".
+  </Text>
+</View>
+      )
+    ) : (
+      <Text style={{ padding: 10, color: "white", textAlign: "center" }}>
+        Aucune donnée de match disponible pour afficher un prono.
+      </Text>
+    )}
+  </ScrollView>
+)}
+
 
         {activeTab === "stats" &&
           (stats ? (
@@ -834,6 +943,7 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
               Statistiques non disponibles pour le moment.
             </Text>
           ))}
+          
         {activeTab === "composition" &&
           (compositionLoading ? (
             <ActivityIndicator
@@ -904,28 +1014,31 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
                     ? "Score non dispo"
                     : `${scoreHome} - ${scoreAway}`;
 
-                return (
-                  <View style={styles.historiqueRow}>
-                    <Text style={styles.historiqueDate}>{dateFormatted}</Text>
-                    <View style={styles.historiqueTeamsRow}>
-                      <Text style={styles.historiqueTeam}>
-                        {item.teams.home.name}
-                      </Text>
-                      <Text style={styles.historiqueScore}>
-                        {scoreHome} - {scoreAway}
-                      </Text>
-                      <Text style={styles.historiqueTeam}>
-                        {item.teams.away.name}
-                      </Text>
-                    </View>
-                    <Text style={styles.historiqueLeague}>
-                      {item.league.name}
-                    </Text>
-                  </View>
-                );
+               return (
+  <View style={styles.historiqueRow}>
+    <Text style={styles.historiqueDate}>{dateFormatted}</Text>
+    <View style={styles.historiqueTeamsRow}>
+      <Text style={styles.historiqueTeam}>
+        {translateTeamName(item.teams.home.name)}
+      </Text>
+      <Text style={styles.historiqueScore}>
+        {scoreHome} - {scoreAway}
+      </Text>
+      <Text style={styles.historiqueTeam}>
+        {translateTeamName(item.teams.away.name)}
+      </Text>
+    </View>
+    <Text style={styles.historiqueLeague}>
+      {item.league.name}
+    </Text>
+  </View>
+);
+
               }}
             />
           ))}
+
+        
         {activeTab === "classement" &&
           (classementLoading ? (
             <ActivityIndicator
@@ -938,7 +1051,7 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
               Aucun classement disponible pour cette compétition.
             </Text>
           ) : (
-            <FlatList
+            <FlatList 
               data={classement}
               keyExtractor={(item) => item.team.id.toString()}
               renderItem={({ item, index }) => (
@@ -955,7 +1068,7 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
                     source={{ uri: item.team.logo }}
                     style={styles.classementLogo}
                   />
-                  <Text style={styles.classementTeam}>{item.team.name}</Text>
+                  <Text style={styles.classementTeam}>{translateTeamName(item.team.name)}</Text>
                   <Text style={styles.classementPoints}>{item.points} pts</Text>
                 </View>
               )}

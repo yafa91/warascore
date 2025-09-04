@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { translateTeamName } from "../utils/translateTeamName"; 
+
 
 const STORAGE_KEY_HISTORY = "pronostics";
 
@@ -14,6 +16,7 @@ interface LivePredictionProps {
   events: { type: string; team: { name: string } }[];
   matchStatus: string;
   matchId: string;
+  elapsed: number | null; 
 }
 
 interface PronosticEntry {
@@ -56,6 +59,7 @@ export default function LivePrediction({
   events,
   matchStatus,
   matchId,
+  elapsed,
 }: LivePredictionProps) {
   const [selected, setSelected] = useState<PredictionValue | null>(null);
   const [secondSelected, setSecondSelected] =
@@ -65,8 +69,17 @@ export default function LivePrediction({
   const [secondResult, setSecondResult] = useState<"win" | "lose" | null>(null);
   const [history, setHistory] = useState<PronosticEntry[]>([]);
 
-  const matchKey = `${teamHome}_${teamAway}_${new Date().toDateString()}`;
+  const matchKey = `${translateTeamName(teamHome)}_${translateTeamName(teamAway)}_${new Date().toDateString()}`;
   const STORAGE_KEY_CURRENT = `current_pronostic_${matchKey}`;
+
+  const liveStatuses = ["1H", "2H", "LIVE", "HT", "ET", "INT"];
+  const canPredict =
+  matchStatus === "NS" ||
+  (liveStatuses.includes(matchStatus) && elapsed !== null && elapsed <= 70);
+
+  const bothTeamsAlreadyScored =
+  events.some((e) => e.type === "Goal" && e.team.name.toLowerCase().includes(teamHome.toLowerCase()))&&
+  events.some((e) => e.type === "Goal" && e.team.name.toLowerCase().includes(teamAway.toLowerCase()));
 
   useEffect(() => {
     async function loadAll() {
@@ -123,7 +136,7 @@ export default function LivePrediction({
 
       const updatedEntry: PronosticEntry = {
         matchId,
-        match: `${teamHome} vs ${teamAway}`,
+        match: `${translateTeamName(teamHome)} vs ${translateTeamName(teamAway)}`,
         prediction: selected,
         actualResult: realResult,
         result: res,
@@ -134,7 +147,6 @@ export default function LivePrediction({
         matchStatus,
       };
 
-      // On remplace l'entrée correspondante non encore actualisée
       const updatedHistory = history.map((entry) =>
         entry.match === updatedEntry.match &&
         (entry.actualResult == null || entry.matchStatus !== "FT")
@@ -150,7 +162,7 @@ export default function LivePrediction({
         confirmed,
         result: res,
         secondResult: secondRes,
-        matchStatus, // on sauvegarde aussi dans current
+        matchStatus,
       });
     }
   }, [
@@ -195,7 +207,15 @@ export default function LivePrediction({
     }
   }
 
-  if (matchStatus !== "LIVE" && matchStatus !== "NS") return null;
+  if (!canPredict && !confirmed) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.closedText}>
+          ⏳ Les pronostics sont fermés pour ce match (après la 70ᵉ minute).
+        </Text>
+      </View>
+    );
+  }
 
   if (result && secondResult) {
     return (
@@ -228,27 +248,31 @@ export default function LivePrediction({
         >
           <Text style={styles.optionText}>
             {opt.label
-              .replace("Équipe A", teamHome)
-              .replace("Équipe B", teamAway)}
+                .replace("Équipe A", translateTeamName(teamHome))
+                .replace("Équipe B", translateTeamName(teamAway))}
           </Text>
         </TouchableOpacity>
       ))}
 
-      <Text style={[styles.title, { marginTop: 16 }]}>
-        Les deux équipes marquent ?
-      </Text>
-      {secondaryOptions.map((opt) => (
-        <TouchableOpacity
-          key={opt.value}
-          style={[
-            styles.option,
-            secondSelected === opt.value && styles.optionSelected,
-          ]}
-          onPress={() => !confirmed && setSecondSelected(opt.value)}
-        >
-          <Text style={styles.optionText}>{opt.label}</Text>
-        </TouchableOpacity>
-      ))}
+      {!bothTeamsAlreadyScored && (
+  <>
+    <Text style={[styles.title, { marginTop: 16 }]}>
+      Les deux équipes marquent ?
+    </Text>
+    {secondaryOptions.map((opt) => (
+      <TouchableOpacity
+        key={opt.value}
+        style={[
+          styles.option,
+          secondSelected === opt.value && styles.optionSelected,
+        ]}
+        onPress={() => !confirmed && setSecondSelected(opt.value)}
+      >
+        <Text style={styles.optionText}>{opt.label}</Text>
+      </TouchableOpacity>
+    ))}
+  </>
+)}
 
       {!confirmed && selected && secondSelected && (
         <TouchableOpacity
@@ -258,7 +282,7 @@ export default function LivePrediction({
 
             const newEntry: PronosticEntry = {
               matchId,
-              match: `${teamHome} vs ${teamAway}`,
+              match: `${translateTeamName(teamHome)} vs ${translateTeamName(teamAway)}`,
               prediction: selected,
               actualResult: null,
               result: null,
@@ -316,5 +340,11 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "center",
     paddingVertical: 6,
+  },
+  closedText: {
+    color: "white",
+    fontSize: 16,
+    textAlign: "center",
+    fontStyle: "italic",
   },
 });

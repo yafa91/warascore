@@ -1,12 +1,16 @@
-import React from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ImageBackground,
-  Dimensions,
   Image,
+  Modal,
+  TouchableWithoutFeedback,
+  PanResponder,
+  Animated,
 } from "react-native";
+
 
 interface Player {
   id: number;
@@ -26,36 +30,71 @@ interface TeamCompositionFieldProps {
 const getShortName = (fullName: string): string => {
   const parts = fullName.trim().split(" ");
   if (parts.length === 1) return parts[0];
-  return parts[parts.length - 1].slice(0, 10);
+  const initials = parts[0].charAt(0).toUpperCase();
+  const lastName = parts[parts.length - 1];
+  return `${initials}. ${lastName.slice(0, 19)}`;
 };
 
-const DEFAULT_PHOTO = require("../assets/players/default.jpg");
 
 const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
   homeTeam = [],
   awayTeam = [],
 }) => {
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const modalTranslateY = useRef(new Animated.Value(0)).current;
+
+  const openModal = () => {
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    modalTranslateY.setValue(0);
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: (evt, gestureState) => {
+        if (gestureState.dy > 0) {
+          modalTranslateY.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dy > 100) {
+          closeModal();
+        } else {
+          Animated.spring(modalTranslateY, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
   const renderPlayer = (player: Player, isHome: boolean) => {
-    if (!player.y || !player.x) {
-      return null;
-    }
+    if (!player.y || !player.x) return null;
+
+  console.log("Home Team players:", homeTeam);
+  console.log("Away Team players:", awayTeam);
+
 
     const team = isHome ? homeTeam : awayTeam;
     const playersInRow = team.filter((p) => p.y === player.y);
     const numPlayersInRow = playersInRow.length;
 
-    const rowSpacing = 9;
+   const rowSpacing = isHome ? 9 : 9;
     const top = isHome
-      ? `${0 + player.y * rowSpacing}%`
-      : `${98 - player.y * rowSpacing}%`;
+      ? `${-4 + player.y * rowSpacing}%`
+      : `${93 - player.y * rowSpacing}%`;
 
-    const widthFactor = 116;
+    const widthFactor = 110;
     const offset = (100 - widthFactor) / 2;
-
     const position = offset + (widthFactor / (numPlayersInRow + 1)) * player.x;
-
     const left = isHome ? `${position}%` : `${100 - position}%`;
-    console.log(player);
+
     return (
       <View
         key={player.id}
@@ -65,7 +104,7 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
             position: "absolute",
             top: top as any,
             left: left as any,
-            transform: [{ translateX: -30 }, { translateY: 0 }],
+            transform: [{ translateX: -30 }],
           },
         ]}
       >
@@ -77,27 +116,44 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
           />
         ) : (
           <Image
-            source={DEFAULT_PHOTO}
+            source={require("../assets/images/avatar-image.png")}
             style={styles.playerPhoto}
             resizeMode="cover"
           />
         )}
-        <Text style={styles.playerName} numberOfLines={2}>
+         <Text style={styles.playerName} numberOfLines={1} ellipsizeMode="tail">
           {player.number} {getShortName(player.name)}
-        </Text>
+         </Text>
       </View>
     );
   };
 
-  return (
+  const renderField = () => (
     <ImageBackground
-      source={require("../assets/images/field.png")}
+      source={require("../assets/images/field2.png")}
       style={styles.field}
       resizeMode="cover"
     >
       {homeTeam.map((p) => renderPlayer(p, true))}
       {awayTeam.map((p) => renderPlayer(p, false))}
     </ImageBackground>
+  );
+
+  return (
+    <>
+      <TouchableWithoutFeedback onPress={openModal}>
+        <View>{renderField()}</View>
+      </TouchableWithoutFeedback>
+
+      <Modal visible={modalVisible} animationType="slide" transparent={false}>
+        <Animated.View
+          style={[styles.modalContainer, { transform: [{ translateY: modalTranslateY }] }]}
+          {...panResponder.panHandlers}
+        >
+          {renderField()}
+        </Animated.View>
+      </Modal>
+    </>
   );
 };
 
@@ -114,31 +170,25 @@ const styles = StyleSheet.create({
   playerContainer: {
     alignItems: "center",
     width: 60,
-    paddingHorizontal: 0,
   },
   playerPhoto: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 25,
+    height: 33,
+    borderRadius: 19,
     marginBottom: 2,
     backgroundColor: "#eee",
   },
-  playerNumber: {
-    color: "red",
-    fontWeight: "bold",
-    //backgroundColor: "rgba(0,0,0,0.6)",
-    borderRadius: 10,
-    width: 24,
-    textAlign: "center",
-    overflow: "hidden",
-    fontSize: 10,
-  },
   playerName: {
-    color: "#000",
-    fontSize: 8,
+    color: "#fff",
+    fontSize: 9,
     textAlign: "center",
-    fontWeight: "bold",
-    flexWrap: "wrap",
-    //backgroundColor: "rgba(0,0,0,0.6)",
+    fontWeight: "600",
+    width: 90, 
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "#0c0c0c",
+    padding: 10,
+    justifyContent: "center",
   },
 });

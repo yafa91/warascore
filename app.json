@@ -8,7 +8,7 @@
     ],
     "scheme": "warascore",
     "splash": {
-      "image": "./assets/images/wara.png",
+      "image": "",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },

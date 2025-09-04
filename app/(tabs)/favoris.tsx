@@ -13,6 +13,195 @@ import { useFavorites } from "@/context/FavoritesContext";
 import { MaterialIcons } from "@expo/vector-icons";
 import { Ionicons } from "@expo/vector-icons";
 
+const translateTeamName = (name: string) => {
+  const translations: { [key: string]: string } = {
+    "Paris Saint Germain": "PSG",
+    "Manchester United": "Man United",
+    "Al-Hilal Saudi FC": "Al Hilal",
+    "Universidad de Concepcion": "U. de Concepcion",
+    "Mali W": "Mali",
+    "South Africa W": "Afrique du Sud",
+    "Ghana W": "Ghana",
+    "FC Botosani": "Botosani",
+    "Tanzania W": "Tanzanie",
+    "Los Angeles Galaxy": "LA Galaxy",
+    "Dinamo Bucuresti": "D. Bucarest",
+    "Independiente Medellin": "Ind. Medellin",
+    "FK Zalgiris Vilnius": "FK Zalgiris",
+    "Hamrun Spartans": "Hamrun",
+    "Los Angeles FC": "LAFC",
+    "Deportes Copiapo": "Copiapo",
+    "Brown DE Adrogue": "Brown Adrogue",
+    "Santiago Morning": "S.Morning",
+    "Germany M": "Allemagne",
+    "Poland W": "Pologne",
+    "Netherlands W": "Pays-Bas",
+    "Fortaleza FC": "Fortaleza",
+    "Hammarby FF": "Hammarby",
+    "Nigeria W": "Nigeria",
+    "Zambia W": "Zambie",
+    "Kristiansund BK": "Kristiansund",
+    "BK Hacken": "Hacken",
+    "Sweden W": "Suède",
+    "Belgium W": "Belgique",
+    "Denmark W": "Danemark",
+    "Universidad de Chile": "U.de Chile",
+    "Germany W": "Allemagne",
+    "Paris Saint-Germain": "PSG",
+    "AFC Hermannstadt": "Hermannstadt",
+    "Rangers de Talca": "Rangers Talca",
+    "Deportes Santa Cruz": "Santa Cruz",
+    "Union San Felipe": "San Filipe",
+    "Shonan Bellmare": "Shonan",
+    "Gangwon FC": "Gangwon",
+    "Jeju United FC": "Jeju United",
+    "Senegal W": "Sénégal",
+    "Pohang Steelers": "Pohang",
+    "Jeonbuk Motors": "Jeonbuk",
+    "Daejeon Citizen": "Daejeon",
+    "Club Brugge KV": "Club Brugge",
+    "Lierse Kempenzonen": "k. Lierse SK",
+    "Sporting CP": "Sporting",
+    "Cerezo Osaka": "C. Osaka",
+    "FC Midtjylland": "Midtjylland",
+    "San Marcos de Arica": "Arica",
+    "Deportivo Laferrere": "Laferrere",
+    "Spain W": "Espagne",
+    "Valur Reykjavik": "Valur",
+    "Olympique de Marseille": "OM",
+    "Borussia Dortmund": "Dortmund",
+    "Deportes Temuco": "Temuco",
+    "Cambodia": "Cambodge",
+    "Saudi Arabia": "Arabie Saoudite",
+    "RB Leipzig": "Leipzig",
+    "Algeria W": "Algerie",
+    "IFK Norrkoping": "Norrkoping",
+    "IF Brommapojkarna": "Brommapojkarna",
+    "England W": "Angleterre",
+    "France W": "France",
+    "Bayer Leverkusen": "Leverkusen",
+    "Arsenal FC": "Arsenal",
+    "Chelsea FC": "Chelsea",
+    "Liverpool FC": "Liverpool",
+    "Manchester City": "Man City",
+    "Belgium": "Belgique",
+    "Spain": "Espagne",
+    "Italy W": "Italie",
+    "Dinamo Minsk": "Din.Minsk",
+    "Inter Club d'Escaldes": "Inter",
+    "England": "Angleterre",
+    "Eintracht Frankfurt": "Francfort",
+    "VfL Wolfsburg": "Wolfsburg",
+    "Portugal W": "Portugal",
+    "West Ham United": "West Ham",
+    "Inter Miami CF": "Inter Miami",
+    "Brazil": "Brésil",
+    "Argentina": "Argentine",
+    "Newcastle United": "Newcastle",
+    "Bayern München": "Bayern",
+    "São Paulo FC": "São Paulo",
+    "Japan": "Japon",
+    "South Korea": "Corée du Sud",
+    "United States": "États-Unis",
+    "Mexico": "Mexique",
+    "Australia": "Australie",
+    "Haverfordwest County AFC": "Haverfordwest",
+    "FC Differdange 03": "Differdange",
+    "The New Saints": "TNS",
+    "Vikingur Gota": "Vikingur",
+    "Egnatia Rrogozhinë": "Egnatia",
+    "Lincoln Red Imps FC": "Lincoln",
+    "Canada": "Canada",
+    "Olimpija Ljubljana": "Olimpija",
+    "Kairat Almaty": "Kairaty",
+    "Seattle Sounders": "Seattle",
+    "Columbus Crew": "Columbus",
+    "Netherlands": "Pays-Bas",
+    "Olympiacos FC": "Olympiakos",
+    "Panathinaikos FC": "Panathinaikos",
+    "AEK Athens FC": "AEK Athènes",
+    "Croatia": "Croatie",
+    "Napoli": "Naples",
+    "Switzerland W": "Suisse",
+    "Iceland W": "Islande",
+    "Poland": "Pologne",
+    "Norway W": "Norvège", 
+    "Finland W": "Finlande",
+    "Serbia": "Serbie",
+    "Turkey": "Turquie",
+    "Iran": "Iran",
+    "Djurgardens IF": "Djurgarden",
+    "Morocco W": "Maroc",
+    "Ghana": "Ghana",
+    "Cameroon": "Cameroun",
+    "Uzbekistan": "Ouzbekistant",
+    "Wales W": "Pays de Galles",
+    "Ivory Coast": "Côte d'Ivoire",
+    "Nigeria": "Nigéria",
+    "South Africa": "Afrique du Sud",
+    "China": "Chine",
+    "Qatar": "Qatar",
+    "Egypt": "Égypte",
+    "Tunisia": "Tunisie",
+    "Flora Tallinn": "Flora",
+    "Kalju Nomme": "Kalju",
+    "Deportivo Armenio": "D. Armenio",
+    "Cliftonville FC": "Cliftonville",
+    "Algeria": "Algérie",
+    "Uruguay": "Uruguay",
+    "Morocco": "Maroc",
+    "Grêmio": "Grêmio",
+    "Atlético Mineiro": "Atlético MG",
+    "Internacional": "Internacional",
+    "Santos FC": "Santos",
+    "Al-Nassr FC": "Al Nassr",
+    "New York City FC": "New York City",
+    "Al-Ittihad Club": "Al Ittihad",
+    "Sheriff Tiraspol": "S. Tiraspol",
+    "Levski Sofia": "Levski",
+    "Zeljeznicar Sarajevo": "Zeljeznicar",
+    "CFR 1907 Cluj": "CFR Cluj",
+    "Hapoel Beer Sheva": "H. Beer Sheva",
+    "St Joseph S Fc": "St Josephs",
+    "Al-Ahli Saudi FC": "Al Ahli",
+    "Atlètic Club d'Escaldes": "Atletic Escaldes",
+    "F91 Dudelange": "Dudelange",
+    "Stade Brestois 29": "Brest",
+    "Georgia": "Georgie",
+    "Malta": "Malte",
+    "Lithuania": "Lituanie",
+    "Northern Ireland": "Irlande du Nord",
+    "Türkiye": "Turquie",
+    "Wales": "Pays de Galles",
+    "Bulgaria": "Bulgarie",
+    "Slovakia": "Slovaquie",
+    "Rot-Weiß Essen": "RW Essen",
+    "FC Copenhagen": "Copenhague",
+    "Borussia Mönchengladbach": "M'gladbach",
+    "FC Nordsjaelland": "Nordsjaelland",
+    "Avispa Fukuoka": "Fukuoka",
+    "Shimizu S-pulse": "Shimizu",
+    "Yokohama F. Marinos": "Yokohama",
+    "Sevilla": "FC Séville",
+    "Athletic Club": "Ath. Bilbao",
+    "SC Braga": "Braga",
+    "Kawazaki Frontale": "Kawazaki",
+    "NK Slaven Belupo": "Slaven",
+    "HNK Rijeka": "Rijeka",
+    "Union La Calera": "U. Calera",
+    "Mineros de Zacatecas": "Mineros",
+    "Atletico Madrid": "Atl. Madrid",
+    "Everton de Vina": "Everton",
+    "Bogota FC": "Bogota",
+    "Red Bull Salzburg": "RB Salzburg ",
+    "Nottingham Forest": "Nottingham",
+    "Maccabi Tel Aviv": "M. Tel Aviv",
+    "PSV Eindhoven": "PSV",
+    "Senegal": "Sénégal",
+  };
+  return translations[name] || name;
+};
+
 const API_URL = "https://v3.football.api-sports.io/fixtures";
 const API_KEY = "b8b570d6f3ff7a8653dee3fb8922d929";
 
@@ -156,16 +345,16 @@ export default function FavorisPage() {
                       source={{ uri: item.teams.home.logo }}
                       style={styles.teamLogo}
                     />
-                    <Text style={styles.teamName}>{item.teams.home.name}</Text>
+                    <Text style={styles.teamName}>{translateTeamName(item.teams.home.name)}</Text>
                   </View>
 
                   <View style={styles.vsContainer}>
                     {isUpcoming ? (
                       <Text style={styles.matchDate}>{formattedDate}</Text>
                     ) : item.fixture.status.short === "HT" ? (
-                      <Text style={styles.halftimeText}>Mi-temps</Text>
+                      <Text style={styles.halftimeText}>MT</Text>
                     ) : item.fixture.status.short === "INT" ? (
-                      <Text style={styles.halftimeText}>Interruption</Text>
+                      <Text style={styles.halftimeText}>Interrompu</Text>
                     ) : item.fixture.status.short === "FT" ||
                       item.fixture.status.short === "AET" ||
                       item.fixture.status.short === "PEN" ? (
@@ -193,7 +382,7 @@ export default function FavorisPage() {
                       source={{ uri: item.teams.away.logo }}
                       style={styles.teamLogo}
                     />
-                    <Text style={styles.teamName}>{item.teams.away.name}</Text>
+                    <Text style={styles.teamName}>{translateTeamName(item.teams.away.name)}</Text>
                   </View>
 
                   <TouchableOpacity
@@ -201,7 +390,7 @@ export default function FavorisPage() {
                     style={styles.bellIconContainer}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="trash" size={24} color="red" />
+                    <Ionicons name="trash" size={22} color="white" />
                   </TouchableOpacity>
 
                   {isLive && (
@@ -289,7 +478,7 @@ const styles = StyleSheet.create({
   },
   vs: {
     color: "#666",
-    fontSize: 16,
+    fontSize: 19,
   },
   bellIconContainer: {
     position: "absolute",

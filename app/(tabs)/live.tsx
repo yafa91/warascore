@@ -3,6 +3,7 @@ import { useNavigation } from "@react-navigation/native";
 import { router } from "expo-router";
 import Feather from "@expo/vector-icons/Feather";
 import * as Notifications from "expo-notifications";
+import { translateTeamName } from "../../utils/translateTeamName";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
@@ -30,37 +31,37 @@ const leagues = [
   {
     id: 61,
     name: "Ligue 1",
-    logo: "https://images.app.goo.gl/1bVDg9nmE41mSYw8A",
+    logo: "https://media.api-sports.io/football/leagues/61.png",
   },
   {
     id: 62,
     name: "Ligue 2 BKT",
-    logo: "https://upload.wikimedia.org/wikipedia/fr/f/f5/Ligue_2_BKT_logo_2020.svg",
+    logo: "https://media.api-sports.io/football/leagues/62.png",
   },
   {
     id: 39,
     name: "Premier League",
-    logo: "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg",
+    logo: "https://media.api-sports.io/football/leagues/39.png",
   },
   {
     id: 78,
     name: "Bundesliga",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/0/0d/Bundesliga_logo_%282017%29.svg",
+    logo: "https://media.api-sports.io/football/leagues/78.png",
   },
   {
     id: 135,
     name: "Serie A",
-    logo: "https://upload.wikimedia.org/wikipedia/en/9/92/LaLiga_Santander.svg",
+    logo: "https://media.api-sports.io/football/leagues/135.png",
   },
   {
     id: 140,
     name: "La Liga",
-    logo: "https://upload.wikimedia.org/wikipedia/en/e/e1/Serie_A_logo_%282019%29.svg",
+    logo: "https://media.api-sports.io/football/leagues/140.png",
   },
   {
     id: 40,
     name: "Championship",
-    logo: "https://upload.wikimedia.org/wikipedia/en/thumb/1/12/EFL_Championship.svg/1200px-EFL_Championship.svg.png",
+    logo: "https://media.api-sports.io/football/leagues/40.png",
   },
 ];
 
@@ -68,7 +69,7 @@ const leagueIdsToInclude = [
   1, 2, 3, 4, 5, 6, 9, 11, 13, 14, 16, 17, 39, 40, 61, 62, 78, 88, 94, 98, 135,
   136, 140, 143, 2000, 2001, 2002, 98, 307, 203, 253, 263, 264, 266, 292, 307,
   848, 210, 30, 15, 858, 36, 34, 31, 894, 32, 239, 859, 38, 131, 141, 240, 329,
-  186,
+  186, 743, 103, 113, 265, 283, 71, 922, 119, 667, 528, 531, 81	
 ];
 
 export default function LivePage() {
@@ -103,7 +104,7 @@ export default function LivePage() {
 
   useEffect(() => {
     fetchMatches();
-    const interval = setInterval(fetchMatches, 20000);
+    const interval = setInterval(fetchMatches, 10000);
     return () => clearInterval(interval);
   }, [viewMode, selectedLeagueId]);
 
@@ -173,61 +174,89 @@ export default function LivePage() {
     }
   };
 
-  const fetchMatches = async () => {
-    setLoading(true);
-    try {
-      let url = BASE_URL;
+const fetchMatches = async () => {
+  try {
+    let url = BASE_URL;
 
-      if (viewMode === "live") {
-        url += "?live=all";
-      } else if (viewMode === "today") {
-        const today = new Date().toISOString().split("T")[0];
-        url += `?date=${today}`;
-      } else if (viewMode === "league" && selectedLeagueId !== null) {
-        const today = new Date().toISOString().split("T")[0];
-        url += `?date=${today}`;
-      }
-
-      const response = await fetch(url, {
-        headers: { "x-apisports-key": API_KEY },
-      });
-
-      const data = await response.json();
-
-      let filtered = [];
-
-      if (viewMode === "live") {
-        filtered = data.response.filter((match) =>
-          leagueIdsToInclude.includes(match.league.id)
-        );
-      } else if (viewMode === "today") {
-        filtered = data.response.filter((match) => match.league.id === 61);
-      } else if (viewMode === "league" && selectedLeagueId !== null) {
-        if (selectedLeagueId === -1) {
-          filtered = data.response.filter(
-            (match) => !leagueIdsToInclude.includes(match.league.id)
-          );
-        } else {
-          filtered = data.response.filter(
-            (match) => match.league.id === selectedLeagueId
-          );
-        }
-      }
-
-      setMatches(filtered);
-    } catch (error) {
-      console.error("Erreur fetch:", error);
-      setMatches([]);
-    } finally {
-      setLoading(false);
+    if (viewMode === "live") {
+      url += "?live=all";
+    } else if (viewMode === "today") {
+      const today = new Date().toISOString().split("T")[0];
+      url += `?date=${today}`;
+    } else if (viewMode === "league" && selectedLeagueId !== null) {
+      const today = new Date().toISOString().split("T")[0];
+      url += `?date=${today}`;
     }
-  };
+
+    const response = await fetch(url, {
+      headers: { "x-apisports-key": API_KEY },
+    });
+
+    const data = await response.json();
+
+    let filtered = [];
+
+    // même filtrage que toi
+    if (viewMode === "live") {
+      filtered = data.response.filter((match) =>
+        leagueIdsToInclude.includes(match.league.id)
+      );
+    } else if (viewMode === "today") {
+      filtered = data.response.filter((match) => match.league.id === 61);
+    } else if (viewMode === "league" && selectedLeagueId !== null) {
+      if (selectedLeagueId === -1) {
+        filtered = data.response.filter(
+          (match) => !leagueIdsToInclude.includes(match.league.id)
+        );
+      } else {
+        filtered = data.response.filter(
+          (match) => match.league.id === selectedLeagueId
+        );
+      }
+    }
+
+    // tri
+    const getMatchPriority = (match) => {
+      const round = match.league.round?.toLowerCase() || "";
+      if (round.includes("final")) return 3;
+      if (round.includes("semi")) return 2;
+      if (round.includes("quarter")) return 1;
+      return 0;
+    };
+
+    filtered.sort((a, b) => {
+      const priorityA = getMatchPriority(a);
+      const priorityB = getMatchPriority(b);
+
+      if (priorityA !== priorityB) return priorityB - priorityA;
+
+      const totalGoalsA = (a.goals.home || 0) + (a.goals.away || 0);
+      const totalGoalsB = (b.goals.home || 0) + (b.goals.away || 0);
+      return totalGoalsB - totalGoalsA;
+    });
+
+    const currentJson = JSON.stringify(matches);
+    const newJson = JSON.stringify(filtered);
+
+    if (currentJson !== newJson) {
+      setMatches(filtered);
+    }
+
+  } catch (error) {
+    console.error("Erreur fetch:", error);
+    setMatches([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const renderItem = ({ item }) => {
     const { fixture, teams, goals, league } = item;
     const elapsed = fixture.status.elapsed;
     const isFav =
       favorites?.some((fav) => fav.fixture.id === item.fixture.id) || false;
+    console.log(translateTeamName(teams.home.name))
 
     return (
       <TouchableOpacity
@@ -256,26 +285,29 @@ export default function LivePage() {
         <View style={styles.teams}>
           <View style={styles.teamBlock}>
             <Image source={{ uri: teams.home.logo }} style={styles.logo} />
-            <Text style={styles.team}>{teams.home.name}</Text>
+             <Text style={styles.team}>{translateTeamName(teams.home.name)}</Text>
           </View>
 
           <View style={styles.centerBlock}>
-            <Text style={styles.time}>
-              {fixture.status.short === "HT"
-                ? "Mi-temps"
-                : fixture.status.short === "FT"
-                ? "Terminé"
-                : fixture.status.short === "INT"
-                ? "Interrompu"
-                : fixture.status.long === "Extra Time" ||
-                  fixture.status.long === "Prolongation" ||
-                  (fixture.status.elapsed !== null &&
-                    fixture.status.elapsed > 90)
-                ? `Prol : ${fixture.status.elapsed}'`
-                : fixture.status.elapsed !== null
-                ? `${fixture.status.elapsed}'`
-                : "En attente"}
-            </Text>
+ <Text style={styles.time}>
+  {fixture.status.short === "PEN"
+    ? "TAB"
+    : fixture.status.short === "HT"
+    ? "MT"
+    : fixture.status.short === "FT"
+    ? "Terminé"
+    : fixture.status.short === "INT"
+    ? "Interrompu"
+    : fixture.status.short === "PST"
+    ? "En attente"
+    : fixture.status.long === "Extra Time" ||
+      fixture.status.long === "Prolongation" ||
+      (fixture.status.elapsed !== null && fixture.status.elapsed > 90)
+    ? `Prol : ${fixture.status.elapsed}'`
+    : fixture.status.elapsed !== null
+    ? `${fixture.status.elapsed}'`
+    : "En attente"}
+</Text>
 
             <Text style={styles.score}>
               {goals.home} - {goals.away}
@@ -284,7 +316,7 @@ export default function LivePage() {
 
           <View style={styles.teamBlock}>
             <Image source={{ uri: teams.away.logo }} style={styles.logo} />
-            <Text style={styles.team}>{teams.away.name}</Text>
+              <Text style={styles.team}>{translateTeamName(teams.away.name)}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -433,8 +465,8 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   leagueLogo: {
-    width: 25,
-    height: 25,
+    width: 29,
+    height: 29,
     marginRight: 5,
   },
   league: {

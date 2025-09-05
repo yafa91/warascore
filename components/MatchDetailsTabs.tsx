@@ -8,12 +8,14 @@ import {
   TouchableOpacity,
   View,
   Image,
+  Button,
+  Linking,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { translateTeamName } from "../utils/translateTeamName";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import TeamCompositionField from "./TeamCompositionField";
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome } from "@expo/vector-icons";
 import LivePrediction from "../components/LivePrediction";
 
 interface Team {
@@ -111,6 +113,41 @@ interface Event {
 
 const API_URL = "https://v3.football.api-sports.io";
 const API_KEY = "b8b570d6f3ff7a8653dee3fb8922d929";
+const YOUTUBE_API_KEY = "AIzaSyBBiYopFRSG7cOfZ65fBzDo-t340WBOT84";
+
+const CHANNELS: Record<string, string> = {
+  dazn: "UC3ABnxyYGryqn2bSLyQKkYQ",
+  canal: "UC8ggH3zU61XO0nMskSQwZdA",
+};
+
+const fetchMatchSummary = async (homeTeam: string, awayTeam: string) => {
+  const queries = [
+    `résumé de ${homeTeam} vs. ${awayTeam}`,
+    `Le résumé de ${homeTeam} / ${awayTeam}`,
+  ];
+
+  for (const [key, channelId] of Object.entries(CHANNELS)) {
+    for (const q of queries) {
+      try {
+        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=1&q=${encodeURIComponent(
+          q
+        )}&channelId=${channelId}&key=${YOUTUBE_API_KEY}`;
+
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.items && data.items.length > 0) {
+          const videoId = data.items[0].id.videoId;
+          return `https://www.youtube.com/watch?v=${videoId}`;
+        }
+      } catch (e) {
+        console.error("Erreur recherche vidéo YouTube :", e);
+      }
+    }
+  }
+
+  return null; // aucun résultat trouvé
+};
 
 const parseGrid = (grid: string | null) => {
   if (!grid) {
@@ -150,6 +187,9 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
   const [historiqueError, setHistoriqueError] = useState(false);
 
   const [playerPhotos, setPlayerPhotos] = useState<Record<number, string>>({});
+
+  const [playerStats, setPlayerStats] = useState<Record<number, any>>({});
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchMatchDetails = async () => {
@@ -204,6 +244,31 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
 
     fetchLineups();
   }, [matchDetails, id]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchPlayerStats = async () => {
+      try {
+        const res = await fetch(`${API_URL}/fixtures/players?fixture=${id}`, {
+          headers: { "x-apisports-key": API_KEY },
+        });
+        const data = await res.json();
+
+        const stats: Record<number, any> = {};
+        data.response.forEach((team: any) => {
+          team.players.forEach((p: any) => {
+            stats[p.player.id] = p.statistics[0]; // on prend le premier bloc de stats
+          });
+        });
+        setPlayerStats(stats);
+      } catch (e) {
+        console.error("Erreur récupération stats joueurs :", e);
+      }
+    };
+
+    fetchPlayerStats();
+  }, [id]);
 
   useEffect(() => {
     if (!matchDetails) return;
@@ -313,31 +378,47 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
   }, [matchDetails]);
 
   useEffect(() => {
-  if (activeTab === "statjoueur") {
-    setLoadingStatJoueur(true);
-    fetch(`${API_URL}?id=${id}`, {
-      headers: {
-        "x-apisports-key": API_KEY,
-      },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && data.response && data.response.length > 0) {
-          setStatJoueurData(data.response[0].players || []);
-        } else {
-          setStatJoueurData([]);
-        }
-        setLoadingStatJoueur(false);
+    if (activeTab === "statjoueur") {
+      setLoadingStatJoueur(true);
+      fetch(`${API_URL}?id=${id}`, {
+        headers: {
+          "x-apisports-key": API_KEY,
+        },
       })
-      .catch((err) => {
-        setErrorStatJoueur("Erreur lors du chargement des stats joueurs");
-        setLoadingStatJoueur(false);
-      });
-  }
-}, [activeTab, id]);
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data.response && data.response.length > 0) {
+            setStatJoueurData(data.response[0].players || []);
+          } else {
+            setStatJoueurData([]);
+          }
+          setLoadingStatJoueur(false);
+        })
+        .catch((err) => {
+          setErrorStatJoueur("Erreur lors du chargement des stats joueurs");
+          setLoadingStatJoueur(false);
+        });
+    }
+  }, [activeTab, id]);
+
+  const loadVideo = async (homeTeam: string, awayTeam: string) => {
+    try {
+      const url = await fetchMatchSummary(homeTeam, awayTeam);
+      console.log("youtube", url);
+      setVideoUrl(url); // ← on met à jour le state
+    } catch (err) {
+      console.error("Erreur fetch vidéo YouTube :", err);
+    }
+  };
 
   useEffect(() => {
     let intervalId: any;
+
+    const homeTeam = matchDetails?.teams.home.name;
+    const awayTeam = matchDetails?.teams.away.name;
+
+    // Charger la vidéo dynamiquement
+    loadVideo(homeTeam || "", awayTeam || "");
 
     const fetchMatchDetails = async () => {
       try {
@@ -495,7 +576,7 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
                 Résumé
               </Text>
             </TouchableOpacity>
-              
+
             <TouchableOpacity
               style={[
                 styles.tabButton,
@@ -546,26 +627,25 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
                 Prono
               </Text>
             </TouchableOpacity>
-           
-{statJoueurData?.length > 0 && (
-  <TouchableOpacity
-    style={[
-      styles.tabButton,
-      activeTab === "statjoueur" && styles.activeTab,
-    ]}
-    onPress={() => setActiveTab("statjoueur")}
-  >
-    <Text
-      style={[
-        styles.tabText,
-        activeTab === "statjoueur" && styles.activeTabText,
-      ]}
-    >
-      Stats joueurs
-    </Text>
-  </TouchableOpacity>
-)}
 
+            {statJoueurData?.length > 0 && (
+              <TouchableOpacity
+                style={[
+                  styles.tabButton,
+                  activeTab === "statjoueur" && styles.activeTab,
+                ]}
+                onPress={() => setActiveTab("statjoueur")}
+              >
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTab === "statjoueur" && styles.activeTabText,
+                  ]}
+                >
+                  Stats joueurs
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {classement && classement.length > 0 && (
               <TouchableOpacity
@@ -609,6 +689,32 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
       <View style={{ flex: 1 }}>
         {activeTab === "resume" && (
           <ScrollView style={styles.tabContent}>
+            {videoUrl &&
+              (() => {
+                const videoId = videoUrl.split("v=")[1].split("&")[0];
+                const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+
+                return (
+                  <TouchableOpacity
+                    style={styles.videoRow}
+                    onPress={() => Linking.openURL(videoUrl)}
+                  >
+                    <View style={styles.thumbnailContainer}>
+                      <Image
+                        source={{ uri: thumbnailUrl }}
+                        style={styles.thumbnailSmall}
+                      />
+                      <View style={styles.playOverlay}>
+                        <Text style={styles.playIcon}>▶</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.videoText}>
+                      Voir le résumé sur YouTube
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })()}
+
             {events.length === 0 ? (
               <Text
                 style={{
@@ -636,96 +742,98 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
                   (e) => (e.time?.elapsed ?? 0) > 120
                 );
 
-  const renderEvent = (event, index) => {
-  const minute = event.time?.elapsed ?? 0;
-  const player = event.player?.name || "";
-  const playerIn = event.player?.name || "";
-  const playerOut = event.assist?.name || "";
-  const teamName = event.team?.name || "";
-  const detail = event.detail || "";
+                const renderEvent = (event, index) => {
+                  const minute = event.time?.elapsed ?? 0;
+                  const player = event.player?.name || "";
+                  const playerIn = event.player?.name || "";
+                  const playerOut = event.assist?.name || "";
+                  const teamName = event.team?.name || "";
+                  const detail = event.detail || "";
 
-  let comment = "";
-  let icon = "";
+                  let comment = "";
+                  let icon = "";
 
-  switch (event.type) {
-    case "Goal":
-      icon = "⚽️"; // ballon de foot
-      if (
-        detail.toLowerCase().includes("own goal") ||
-        detail.toLowerCase().includes("csc")
-      ) {
-        comment = `${minute}ème minute, but contre son camp pour ${teamName}`;
-      } else if (detail.toLowerCase().includes("penalty")) {
-        comment = `${minute}ème minute, penalty transformé par ${player} pour ${teamName}`;
-      } else {
-        comment = `${minute}ème minute, ${player} marque un but pour ${teamName}`;
-      }
-      break;
+                  switch (event.type) {
+                    case "Goal":
+                      icon = "⚽️"; // ballon de foot
+                      if (
+                        detail.toLowerCase().includes("own goal") ||
+                        detail.toLowerCase().includes("csc")
+                      ) {
+                        comment = `${minute}ème minute, but contre son camp pour ${teamName}`;
+                      } else if (detail.toLowerCase().includes("penalty")) {
+                        comment = `${minute}ème minute, penalty transformé par ${player} pour ${teamName}`;
+                      } else {
+                        comment = `${minute}ème minute, ${player} marque un but pour ${teamName}`;
+                      }
+                      break;
 
-    case "Substitution":
-      icon = "🔄"; // flèches pour changement
-      comment = `${minute}ème minute, changement pour ${teamName} : ${playerOut} est remplacé par ${playerIn}`;
-      break;
+                    case "Substitution":
+                      icon = "🔄"; // flèches pour changement
+                      comment = `${minute}ème minute, changement pour ${teamName} : ${playerOut} est remplacé par ${playerIn}`;
+                      break;
 
-    case "Card":
-      if (detail === "Red Card") {
-        icon = "🟥"; // carré rouge
-        comment = `${minute}ème minute, carton rouge pour ${player} (${teamName})`;
-      } else if (detail === "Yellow Card") {
-        icon = "🟨"; // carré jaune
-        comment = `${minute}ème minute, carton jaune pour ${player} (${teamName})`;
-      } else {
-        icon = "🟦"; // carré bleu ou autre couleur pour les cartons spéciaux
-        comment = `${minute}ème minute, carton ${detail.toLowerCase()} pour ${player} (${teamName})`;
-      }
-      break;
+                    case "Card":
+                      if (detail === "Red Card") {
+                        icon = "🟥"; // carré rouge
+                        comment = `${minute}ème minute, carton rouge pour ${player} (${teamName})`;
+                      } else if (detail === "Yellow Card") {
+                        icon = "🟨"; // carré jaune
+                        comment = `${minute}ème minute, carton jaune pour ${player} (${teamName})`;
+                      } else {
+                        icon = "🟦"; // carré bleu ou autre couleur pour les cartons spéciaux
+                        comment = `${minute}ème minute, carton ${detail.toLowerCase()} pour ${player} (${teamName})`;
+                      }
+                      break;
 
-    case "Offside":
-      icon = "🚩"; // drapeau
-      comment = `${minute}ème minute, hors-jeu signalé pour ${player} (${teamName})`;
-      break;
+                    case "Offside":
+                      icon = "🚩"; // drapeau
+                      comment = `${minute}ème minute, hors-jeu signalé pour ${player} (${teamName})`;
+                      break;
 
-    case "Injury":
-      icon = "⚕️"; // symbole médical
-      comment = `${minute}ème minute, blessure pour ${player} (${teamName})`;
-      break;
+                    case "Injury":
+                      icon = "⚕️"; // symbole médical
+                      comment = `${minute}ème minute, blessure pour ${player} (${teamName})`;
+                      break;
 
-    case "Var":
-      icon = "📺"; // TV ou caméra
-      comment = `${minute}ème minute, intervention VAR : ${detail}`;
-      break;
+                    case "Var":
+                      icon = "📺"; // TV ou caméra
+                      comment = `${minute}ème minute, intervention VAR : ${detail}`;
+                      break;
 
-    case "Penalty":
-      icon = "🎯"; // cible
-      comment = `${minute}ème minute, penalty pour ${teamName} - ${detail}`;
-      break;
+                    case "Penalty":
+                      icon = "🎯"; // cible
+                      comment = `${minute}ème minute, penalty pour ${teamName} - ${detail}`;
+                      break;
 
-    default:
-      icon = "🔄"; // info
-      comment = `${minute}ème minute, événement : ${event.type} (${detail}) pour ${teamName}`;
-  }
+                    default:
+                      icon = "🔄"; // info
+                      comment = `${minute}ème minute, événement : ${event.type} (${detail}) pour ${teamName}`;
+                  }
 
+                  const isLeft = index % 2 === 0;
 
-  const isLeft = index % 2 === 0;
+                  const containerStyle = {
+                    alignSelf: isLeft ? "flex-start" : "flex-end",
+                    backgroundColor: isLeft ? "#222244" : "#442222",
+                    borderRadius: 10,
+                    marginVertical: 5,
+                    paddingVertical: 8,
+                    paddingHorizontal: 15,
+                    maxWidth: "75%",
+                    flexDirection: "row",
+                    alignItems: "center",
+                  };
 
-  const containerStyle = {
-    alignSelf: isLeft ? "flex-start" : "flex-end",
-    backgroundColor: isLeft ? "#222244" : "#442222",
-    borderRadius: 10,
-    marginVertical: 5,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    maxWidth: "75%",
-    flexDirection: "row",
-    alignItems: "center",
-  };
-
-  return (
-    <Text key={index} style={[containerStyle, { color: "white" }]}>
-      {icon} {comment}
-    </Text>
-  );
-};
+                  return (
+                    <Text
+                      key={index}
+                      style={[containerStyle, { color: "white" }]}
+                    >
+                      {icon} {comment}
+                    </Text>
+                  );
+                };
 
                 return (
                   <>
@@ -802,87 +910,118 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
           </ScrollView>
         )}
 
-{activeTab === "statjoueur" && hasStatJoueur && (
-  <ScrollView style={{ flex: 1, padding: 10, backgroundColor: "#111" }}>
-    {loadingStatJoueur ? (
-      <ActivityIndicator size="large" color="#f33" style={{ marginTop: 20 }} />
-    ) : errorStatJoueur ? (
-      <Text style={{ color: "red", textAlign: "center", marginTop: 20 }}>
-        {errorStatJoueur}
-      </Text>
-    ) : (
-      statJoueurData.map((player: any, index: number) => (
-        <View
-          key={index}
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            marginBottom: 12,
-            padding: 10,
-            backgroundColor: "#222",
-            borderRadius: 8,
-          }}
-        >
-          <Image
-            source={{ uri: player.player.photo }}
-            style={{ width: 50, height: 50, borderRadius: 25, marginRight: 10 }}
-          />
-          <View>
-            <Text style={{ fontWeight: "bold", color: "#ff0", fontSize: 16 }}>
-              {player.player.name}
-            </Text>
-            <Text style={{ color: "white" }}>
-              Minutes jouées : {player.statistics?.[0]?.games?.minutes ?? "N/A"}
-            </Text>
-            <Text style={{ color: "white" }}>
-              Buts : {player.statistics?.[0]?.goals?.total ?? 0}
-            </Text>
-            <Text style={{ color: "white" }}>
-              Passes décisives : {player.statistics?.[0]?.passes?.assists ?? 0}
-            </Text>
-          </View>
-        </View>
-      ))
-    )}
-  </ScrollView>
-)}
+        {activeTab === "statjoueur" && hasStatJoueur && (
+          <ScrollView style={{ flex: 1, padding: 10, backgroundColor: "#111" }}>
+            {loadingStatJoueur ? (
+              <ActivityIndicator
+                size="large"
+                color="#f33"
+                style={{ marginTop: 20 }}
+              />
+            ) : errorStatJoueur ? (
+              <Text
+                style={{ color: "red", textAlign: "center", marginTop: 20 }}
+              >
+                {errorStatJoueur}
+              </Text>
+            ) : (
+              statJoueurData.map((player: any, index: number) => (
+                <View
+                  key={index}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginBottom: 12,
+                    padding: 10,
+                    backgroundColor: "#222",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Image
+                    source={{ uri: player.player.photo }}
+                    style={{
+                      width: 50,
+                      height: 50,
+                      borderRadius: 25,
+                      marginRight: 10,
+                    }}
+                  />
+                  <View>
+                    <Text
+                      style={{
+                        fontWeight: "bold",
+                        color: "#ff0",
+                        fontSize: 16,
+                      }}
+                    >
+                      {player.player.name}
+                    </Text>
+                    <Text style={{ color: "white" }}>
+                      Minutes jouées :{" "}
+                      {player.statistics?.[0]?.games?.minutes ?? "N/A"}
+                    </Text>
+                    <Text style={{ color: "white" }}>
+                      Buts : {player.statistics?.[0]?.goals?.total ?? 0}
+                    </Text>
+                    <Text style={{ color: "white" }}>
+                      Passes décisives :{" "}
+                      {player.statistics?.[0]?.passes?.assists ?? 0}
+                    </Text>
+                  </View>
+                </View>
+              ))
+            )}
+          </ScrollView>
+        )}
 
-
-{activeTab === "prono" && (
-  <ScrollView style={styles.tabContent}>
-    {matchDetails ? (
-      matchDetails.fixture.status.short === "LIVE" ||
-      matchDetails.fixture.status.short === "1H" ||
-      matchDetails.fixture.status.short === "2H" ||
-      matchDetails.fixture.status.short === "HT" ||
-      matchDetails.fixture.status.short === "INT" ||
-      matchDetails.fixture.status.short === "NS" ? (
-        <LivePrediction
-          matchId={matchDetails.fixture.id}
-          teamHome={matchDetails.teams.home.name}
-          teamAway={matchDetails.teams.away.name}
-          events={events}
-          matchStatus={matchDetails.fixture.status.short}
-          elapsed={matchDetails.fixture.status.elapsed}
-          onResultCheck={() => {}}
-        />
-      ) : (
-       <View style={{ alignItems: "center", padding: 20 }}>
-  <FontAwesome name="trophy" size={50} color="#FFD700" style={{ marginBottom: 10 }} />
-  <Text style={{ color: "white", textAlign: "center", fontSize: 16 }}>
-    Le match est terminé.{"\n"}
-    Rends-toi dans le menu "Profil" pour voir tes résultats dans la section "Mes Pronos".
-  </Text>
-</View>
-      )
-    ) : (
-      <Text style={{ padding: 10, color: "white", textAlign: "center" }}>
-        Aucune donnée de match disponible pour afficher un prono.
-      </Text>
-    )}
-  </ScrollView>
-)}
-
+        {activeTab === "prono" && (
+          <ScrollView style={styles.tabContent}>
+            {matchDetails ? (
+              matchDetails.fixture.status.short === "LIVE" ||
+              matchDetails.fixture.status.short === "1H" ||
+              matchDetails.fixture.status.short === "2H" ||
+              matchDetails.fixture.status.short === "HT" ||
+              matchDetails.fixture.status.short === "INT" ||
+              matchDetails.fixture.status.short === "NS" ? (
+                <LivePrediction
+                  matchId={matchDetails.fixture.id}
+                  teamHome={matchDetails.teams.home.name}
+                  teamAway={matchDetails.teams.away.name}
+                  events={events}
+                  matchStatus={matchDetails.fixture.status.short}
+                  elapsed={matchDetails.fixture.status.elapsed}
+                  onResultCheck={() => {}}
+                />
+              ) : (
+                <View style={{ alignItems: "center", padding: 20 }}>
+                  <FontAwesome
+                    name="trophy"
+                    size={50}
+                    color="#FFD700"
+                    style={{ marginBottom: 10 }}
+                  />
+                  <Text
+                    style={{
+                      color: "white",
+                      textAlign: "center",
+                      fontSize: 16,
+                    }}
+                  >
+                    Le match est terminé.{"\n"}
+                    Rends-toi dans le menu "Profil" pour voir tes résultats dans
+                    la section "Mes Pronos".
+                  </Text>
+                </View>
+              )
+            ) : (
+              <Text
+                style={{ padding: 10, color: "white", textAlign: "center" }}
+              >
+                Aucune donnée de match disponible pour afficher un prono.
+              </Text>
+            )}
+          </ScrollView>
+        )}
 
         {activeTab === "stats" &&
           (stats ? (
@@ -943,7 +1082,7 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
               Statistiques non disponibles pour le moment.
             </Text>
           ))}
-          
+
         {activeTab === "composition" &&
           (compositionLoading ? (
             <ActivityIndicator
@@ -973,11 +1112,13 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
                     ...p.player,
                     ...parseGrid(p.player.grid),
                     photo: playerPhotos[p.player.id],
+                    stats: playerStats[p.player.id],
                   }))}
                   awayTeam={composition.away.map((p) => ({
                     ...p.player,
                     ...parseGrid(p.player.grid),
                     photo: playerPhotos[p.player.id],
+                    stats: playerStats[p.player.id],
                   }))}
                 />
               </View>
@@ -1014,31 +1155,29 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
                     ? "Score non dispo"
                     : `${scoreHome} - ${scoreAway}`;
 
-               return (
-  <View style={styles.historiqueRow}>
-    <Text style={styles.historiqueDate}>{dateFormatted}</Text>
-    <View style={styles.historiqueTeamsRow}>
-      <Text style={styles.historiqueTeam}>
-        {translateTeamName(item.teams.home.name)}
-      </Text>
-      <Text style={styles.historiqueScore}>
-        {scoreHome} - {scoreAway}
-      </Text>
-      <Text style={styles.historiqueTeam}>
-        {translateTeamName(item.teams.away.name)}
-      </Text>
-    </View>
-    <Text style={styles.historiqueLeague}>
-      {item.league.name}
-    </Text>
-  </View>
-);
-
+                return (
+                  <View style={styles.historiqueRow}>
+                    <Text style={styles.historiqueDate}>{dateFormatted}</Text>
+                    <View style={styles.historiqueTeamsRow}>
+                      <Text style={styles.historiqueTeam}>
+                        {translateTeamName(item.teams.home.name)}
+                      </Text>
+                      <Text style={styles.historiqueScore}>
+                        {scoreHome} - {scoreAway}
+                      </Text>
+                      <Text style={styles.historiqueTeam}>
+                        {translateTeamName(item.teams.away.name)}
+                      </Text>
+                    </View>
+                    <Text style={styles.historiqueLeague}>
+                      {item.league.name}
+                    </Text>
+                  </View>
+                );
               }}
             />
           ))}
 
-        
         {activeTab === "classement" &&
           (classementLoading ? (
             <ActivityIndicator
@@ -1051,7 +1190,7 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
               Aucun classement disponible pour cette compétition.
             </Text>
           ) : (
-            <FlatList 
+            <FlatList
               data={classement}
               keyExtractor={(item) => item.team.id.toString()}
               renderItem={({ item, index }) => (
@@ -1068,7 +1207,9 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
                     source={{ uri: item.team.logo }}
                     style={styles.classementLogo}
                   />
-                  <Text style={styles.classementTeam}>{translateTeamName(item.team.name)}</Text>
+                  <Text style={styles.classementTeam}>
+                    {translateTeamName(item.team.name)}
+                  </Text>
                   <Text style={styles.classementPoints}>{item.points} pts</Text>
                 </View>
               )}
@@ -1385,5 +1526,45 @@ const styles = StyleSheet.create({
   },
   compositionScroll: {
     paddingBottom: 30,
+  },
+  tabContent: { flex: 1, padding: 10 },
+  videoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 10,
+    marginBottom: 15,
+    backgroundColor: "#222244",
+    borderRadius: 8,
+  },
+  thumbnailContainer: {
+    position: "relative",
+  },
+  thumbnailSmall: {
+    width: 120,
+    height: 70,
+    borderRadius: 6,
+  },
+  playOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  playIcon: {
+    fontSize: 30,
+    color: "white",
+    textShadowColor: "#000",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  videoText: {
+    color: "white",
+    marginLeft: 10,
+    fontSize: 14,
+    fontWeight: "500",
+    flexShrink: 1,
   },
 });

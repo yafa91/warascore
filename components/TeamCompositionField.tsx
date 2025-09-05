@@ -1,16 +1,18 @@
-import React, { useState, useRef } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ImageBackground,
   Image,
-  Modal,
-  TouchableWithoutFeedback,
-  PanResponder,
-  Animated,
+  TouchableOpacity,
 } from "react-native";
-
+import {
+  BottomSheetModal,
+  BottomSheetModalProvider,
+  BottomSheetScrollView,
+} from "@gorhom/bottom-sheet";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 interface Player {
   id: number;
@@ -20,6 +22,7 @@ interface Player {
   x: number;
   y: number;
   photo?: string;
+  stats?: any;
 }
 
 interface TeamCompositionFieldProps {
@@ -35,57 +38,24 @@ const getShortName = (fullName: string): string => {
   return `${initials}. ${lastName.slice(0, 19)}`;
 };
 
-
 const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
   homeTeam = [],
   awayTeam = [],
 }) => {
-  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
 
-  const modalTranslateY = useRef(new Animated.Value(0)).current;
-
-  const openModal = () => {
-    setModalVisible(true);
-  };
-
-  const closeModal = () => {
-    setModalVisible(false);
-    modalTranslateY.setValue(0);
-  };
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderMove: (evt, gestureState) => {
-        if (gestureState.dy > 0) {
-          modalTranslateY.setValue(gestureState.dy);
-        }
-      },
-      onPanResponderRelease: (evt, gestureState) => {
-        if (gestureState.dy > 100) {
-          closeModal();
-        } else {
-          Animated.spring(modalTranslateY, {
-            toValue: 0,
-            useNativeDriver: true,
-          }).start();
-        }
-      },
-    })
-  ).current;
-
-  const renderPlayer = (player: Player, isHome: boolean) => {
+  const renderPlayer = (
+    player: Player,
+    isHome: boolean,
+    presentModal: (player: Player) => void
+  ) => {
     if (!player.y || !player.x) return null;
-
-  console.log("Home Team players:", homeTeam);
-  console.log("Away Team players:", awayTeam);
-
 
     const team = isHome ? homeTeam : awayTeam;
     const playersInRow = team.filter((p) => p.y === player.y);
     const numPlayersInRow = playersInRow.length;
 
-   const rowSpacing = isHome ? 9 : 9;
+    const rowSpacing = isHome ? 9 : 9;
     const top = isHome
       ? `${-4 + player.y * rowSpacing}%`
       : `${93 - player.y * rowSpacing}%`;
@@ -96,7 +66,7 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
     const left = isHome ? `${position}%` : `${100 - position}%`;
 
     return (
-      <View
+      <TouchableOpacity
         key={player.id}
         style={[
           styles.playerContainer,
@@ -107,6 +77,9 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
             transform: [{ translateX: -30 }],
           },
         ]}
+        onPress={() => {
+          presentModal(player);
+        }}
       >
         {player.photo ? (
           <Image
@@ -121,39 +94,112 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
             resizeMode="cover"
           />
         )}
-         <Text style={styles.playerName} numberOfLines={1} ellipsizeMode="tail">
+        <Text style={styles.playerName} numberOfLines={1} ellipsizeMode="tail">
           {player.number} {getShortName(player.name)}
-         </Text>
-      </View>
+        </Text>
+      </TouchableOpacity>
     );
   };
 
-  const renderField = () => (
+  const renderField = (presentModal: (player: Player) => void) => (
     <ImageBackground
       source={require("../assets/images/field2.png")}
       style={styles.field}
       resizeMode="cover"
     >
-      {homeTeam.map((p) => renderPlayer(p, true))}
-      {awayTeam.map((p) => renderPlayer(p, false))}
+      {homeTeam.map((p) => renderPlayer(p, true, presentModal))}
+      {awayTeam.map((p) => renderPlayer(p, false, presentModal))}
     </ImageBackground>
   );
 
-  return (
-    <>
-      <TouchableWithoutFeedback onPress={openModal}>
-        <View>{renderField()}</View>
-      </TouchableWithoutFeedback>
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
 
-      <Modal visible={modalVisible} animationType="slide" transparent={false}>
-        <Animated.View
-          style={[styles.modalContainer, { transform: [{ translateY: modalTranslateY }] }]}
-          {...panResponder.panHandlers}
+  // callbacks
+  const handlePresentModalPress = useCallback(() => {
+    bottomSheetModalRef.current?.present();
+  }, []);
+
+  const handlePlayerPress = (player: Player) => {
+    setSelectedPlayer(player);
+    handlePresentModalPress();
+  };
+
+  return (
+    <GestureHandlerRootView>
+      <BottomSheetModalProvider>
+        <View>{renderField(handlePlayerPress)}</View>
+        <BottomSheetModal
+          ref={bottomSheetModalRef}
+          snapPoints={[250]}
+          backgroundStyle={{
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            backgroundColor: "#121212",
+          }}
+          handleIndicatorStyle={{
+            backgroundColor: "red",
+          }}
         >
-          {renderField()}
-        </Animated.View>
-      </Modal>
-    </>
+          <BottomSheetScrollView
+            contentContainerStyle={styles.contentContainer}
+          >
+            {selectedPlayer && (
+              <View style={styles.statsContainer}>
+                {/* Photo + Nom */}
+                <View style={styles.playerHeader}>
+                  <Image
+                    source={{ uri: selectedPlayer.photo }}
+                    style={styles.playerPhotoLarge}
+                  />
+                  <View style={{ marginLeft: 12 }}>
+                    <Text style={styles.playerNameLarge}>
+                      {selectedPlayer.name}
+                    </Text>
+                    <Text style={styles.playerInfo}>
+                      #{selectedPlayer.number} • {selectedPlayer.pos}
+                    </Text>
+                    <Text style={styles.playerInfo}>
+                      Minutes : {selectedPlayer.stats?.games?.minutes ?? 0} |
+                      Note : {selectedPlayer.stats?.games?.rating ?? "-"}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Stats */}
+                {selectedPlayer.pos === "G" ? (
+                  <View style={styles.statsGrid}>
+                    <Text style={styles.statItem}>
+                      🧤 Arrêts : {selectedPlayer.stats?.goals?.saves ?? 0}
+                    </Text>
+                    <Text style={styles.statItem}>
+                      ❌ Buts encaissés :{" "}
+                      {selectedPlayer.stats?.goals?.conceded ?? 0}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.statsGrid}>
+                    <Text style={styles.statItem}>
+                      🎯 Tirs : {selectedPlayer.stats?.shots?.total ?? 0}
+                    </Text>
+                    <Text style={styles.statItem}>
+                      ⚽ Buts : {selectedPlayer.stats?.goals?.total ?? 0}
+                    </Text>
+                    <Text style={styles.statItem}>
+                      📊 Passes : {selectedPlayer.stats?.passes?.total ?? 0} (
+                      {selectedPlayer.stats?.passes?.accuracy ?? "0%"})
+                    </Text>
+                    <Text style={styles.statItem}>
+                      🟨 Jaunes : {selectedPlayer.stats?.cards?.yellow ?? 0} |
+                      🟥 Rouges : {selectedPlayer.stats?.cards?.red ?? 0}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </BottomSheetScrollView>
+        </BottomSheetModal>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
   );
 };
 
@@ -183,12 +229,48 @@ const styles = StyleSheet.create({
     fontSize: 9,
     textAlign: "center",
     fontWeight: "600",
-    width: 90, 
+    width: 90,
   },
   modalContainer: {
     flex: 1,
     backgroundColor: "#0c0c0c",
     padding: 10,
     justifyContent: "center",
+  },
+  contentContainer: {
+    flex: 1,
+    alignItems: "center",
+    minHeight: 200,
+    padding: 16,
+  },
+  statsContainer: {
+    flex: 1,
+  },
+  playerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  playerPhotoLarge: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+  },
+  playerNameLarge: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "white",
+  },
+  playerInfo: {
+    fontSize: 14,
+    color: "gray",
+  },
+  statsGrid: {
+    marginTop: 12,
+  },
+  statItem: {
+    fontSize: 16,
+    marginBottom: 8,
+    color: "white",
   },
 });

@@ -10,8 +10,6 @@ import { useLayoutEffect } from "react";
 import { Share } from "react-native";
 import { useFavorites } from "@/context/FavoritesContext";
 
-
-
 import {
   View,
   Text,
@@ -152,16 +150,15 @@ export default function MatchDetails() {
             }}
             style={{ marginLeft: 12 }}
           >
-               <Ionicons
-  name={
-    fixture && isFavorite(fixture.fixture.id)
-      ? "notifications"
-      : "notifications-outline"
-  }
-  size={24}
-  color="white"
-/>
-
+            <Ionicons
+              name={
+                fixture && isFavorite(fixture.fixture.id)
+                  ? "notifications"
+                  : "notifications-outline"
+              }
+              size={24}
+              color="white"
+            />
           </TouchableOpacity>
         </View>
       ),
@@ -207,7 +204,6 @@ export default function MatchDetails() {
           setLoading(false);
           return;
         }
-
         setFixture(fixtureData.response[0]);
 
         const eventsRes = await fetch(
@@ -263,12 +259,10 @@ const MatchCard = ({
   fixture: MatchDetails;
   events: Event[];
 }) => {
-  
   const router = useRouter();
   const { teams, goals, league, fixture: fix } = fixture;
 
-  console.log(translateTeamName(teams.home.name)); 
-
+  console.log(translateTeamName(teams.home.name));
 
   const now = new Date();
   const fixtureStartTime = new Date(fix.date);
@@ -321,28 +315,27 @@ const MatchCard = ({
     fix.status.short === "P" || fix.status.long === "Penalty Shootout";
 
   const isPenaltyShootoutGoal = (e: Event) => {
-  return (
-    e.type === "Penalty" ||
-    (e.type === "Goal" &&
-      e.detail === "Penalty" &&
-      (e.time.elapsed === 0 || e.time.elapsed === null))
+    return (
+      e.type === "Penalty" ||
+      (e.type === "Goal" &&
+        e.detail === "Penalty" &&
+        (e.time.elapsed === 0 || e.time.elapsed === null))
+    );
+  };
+
+  const homeGoals = events.filter(
+    (e) =>
+      e.type === "Goal" &&
+      e.team.id === teams.home.id &&
+      !isPenaltyShootoutGoal(e)
   );
-};
 
-const homeGoals = events.filter(
-  (e) =>
-    e.type === "Goal" &&
-    e.team.id === teams.home.id &&
-    !isPenaltyShootoutGoal(e)
-);
-
-const awayGoals = events.filter(
-  (e) =>
-    e.type === "Goal" &&
-    e.team.id === teams.away.id &&
-    !isPenaltyShootoutGoal(e)
-);
-
+  const awayGoals = events.filter(
+    (e) =>
+      e.type === "Goal" &&
+      e.team.id === teams.away.id &&
+      !isPenaltyShootoutGoal(e)
+  );
 
   const groupGoalsByPlayer = (goals: Event[]) => {
     const grouped: Record<string, GoalInfo> = {};
@@ -368,70 +361,65 @@ const awayGoals = events.filter(
 
   const groupedHomeGoals = groupGoalsByPlayer(homeGoals);
   const groupedAwayGoals = groupGoalsByPlayer(awayGoals);
-  
 
- return (
+  return (
     <View style={styles.card}>
       <View style={styles.leagueContainer}>
         <Image source={{ uri: league.logo }} style={styles.leagueLogo} />
-          <TouchableOpacity
-          onPress={() => router.push(`/league/${league.id}`)}
-          >
-                <Text style={[styles.league, { color: "white" }]}>
-            {league.name}
-          </Text>
+        <TouchableOpacity onPress={() => router.push(`/league/${league.id}`)}>
+          <Text style={[styles.league, { color: "white" }]}>{league.name}</Text>
         </TouchableOpacity>
       </View>
-     
-     <View style={styles.timeContainer}>
-  {fix.status.short === "HT" ? (
-    <Text style={styles.timeText}>Mi-temps</Text>
-  ) : ["INT", "PST", "ABD"].includes(fix.status.short) ? (
-    <Text style={styles.timeText}>Interrompu</Text>
-  ) : fix.status.short === "ET" && currentMinute === null ? (
-    <Text style={styles.timeText}>En attente</Text>
-  ) : fix.status.short === "ET" && currentMinute !== null ? (
-    <Text style={styles.timeText}>Prolongation : {currentMinute}'</Text>
-  ) : fix.status.short === "P" && currentMinute === null ? (
-    <Text style={styles.timeText}>TAB</Text>
-  ) : fix.status.short === "P" && currentMinute !== null ? (
-    <Text style={styles.timeText}>Tirs au but</Text>
-  ) : ["1H", "2H", "LIVE"].includes(fix.status.short) ? (
-    <Text style={styles.timeText}>
-      {currentMinute !== null ? `${currentMinute}'` : fix.status.long}
-    </Text>
-  ) : (
-    <Text style={styles.timeTextDate}>
-      {new Date(fix.date).toLocaleDateString([], {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      })}{" "}
-      -{" "}
-      {new Date(fix.date).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}
-    </Text>
-  )}
-</View>
 
+      <View style={styles.timeContainer}>
+        {fix.status.short === "HT" ? (
+          <Text style={styles.timeText}>Mi-temps</Text>
+        ) : ["INT", "PST", "ABD"].includes(fix.status.short) ? (
+          <Text style={styles.timeText}>Interrompu</Text>
+        ) : fix.status.short === "ET" && currentMinute === null ? (
+          <Text style={styles.timeText}>En attente</Text>
+        ) : fix.status.short === "ET" && currentMinute !== null ? (
+          <Text style={styles.timeText}>Prolongation : {currentMinute}'</Text>
+        ) : fix.status.short === "P" && currentMinute === null ? (
+          <Text style={styles.timeText}>TAB</Text>
+        ) : fix.status.short === "P" && currentMinute !== null ? (
+          <Text style={styles.timeText}>Tirs au but</Text>
+        ) : ["1H", "2H", "LIVE"].includes(fix.status.short) ? (
+          <Text style={styles.timeText}>
+            {currentMinute !== null ? `${currentMinute}'` : fix.status.long}
+          </Text>
+        ) : (
+          <Text style={styles.timeTextDate}>
+            {new Date(fix.date).toLocaleDateString([], {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+            })}{" "}
+            -{" "}
+            {new Date(fix.date).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </Text>
+        )}
+      </View>
 
       <View style={styles.teamsRow}>
-       <View style={styles.teamContainer}>
-  <TouchableOpacity onPress={() => router.push(`/team/${teams.home.id}`)}>
-    <Image source={{ uri: teams.home.logo }} style={styles.teamLogo} />
-  </TouchableOpacity>
-  <Text
-  style={styles.teamName}
-  numberOfLines={1}
-  adjustsFontSizeToFit
-  minimumFontScale={0.7} 
->
-  {translateTeamName(teams.home.name)}
-</Text>
-
-</View>
+        <View style={styles.teamContainer}>
+          <TouchableOpacity
+            onPress={() => router.push(`/team/${teams.home.id}`)}
+          >
+            <Image source={{ uri: teams.home.logo }} style={styles.teamLogo} />
+          </TouchableOpacity>
+          <Text
+            style={styles.teamName}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
+            {translateTeamName(teams.home.name)}
+          </Text>
+        </View>
 
         <View style={styles.scoreContainer}>
           <Text style={styles.score}>{goals.home ?? 0}</Text>
@@ -454,27 +442,25 @@ const awayGoals = events.filter(
           </View>
         )}
 
-
-       <View style={styles.teamContainer}>
-  <TouchableOpacity onPress={() => router.push(`/team/${teams.away.id}`)}>
-    <Image source={{ uri: teams.away.logo }} style={styles.teamLogo} />
-  </TouchableOpacity>
-  <Text
-  style={styles.teamName}
-  numberOfLines={1}
-  adjustsFontSizeToFit
-  minimumFontScale={0.7}
->
-  {translateTeamName(teams.away.name)}
-</Text>
-
-
-</View>
+        <View style={styles.teamContainer}>
+          <TouchableOpacity
+            onPress={() => router.push(`/team/${teams.away.id}`)}
+          >
+            <Image source={{ uri: teams.away.logo }} style={styles.teamLogo} />
+          </TouchableOpacity>
+          <Text
+            style={styles.teamName}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
+            {translateTeamName(teams.away.name)}
+          </Text>
+        </View>
       </View>
       {((fixture.goals.home ?? 0) > 0 || (fixture.goals.away ?? 0) > 0) && (
         <View style={styles.separator} />
       )}
-      
 
       <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
         <View style={{ flex: 1 }}>
@@ -509,9 +495,6 @@ const awayGoals = events.filter(
             </Text>
           ))}
         </View>
-        
-        
-
       </View>
       {(recentGoal || recentBigChance) && (
         <View style={{ marginTop: 10 }}>

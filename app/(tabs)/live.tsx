@@ -69,7 +69,7 @@ const leagueIdsToInclude = [
   1, 2, 3, 4, 5, 6, 9, 11, 13, 14, 16, 17, 39, 40, 61, 62, 78, 88, 94, 98, 135,
   136, 140, 143, 2000, 2001, 2002, 98, 307, 203, 253, 263, 264, 266, 292, 307,
   848, 210, 30, 15, 858, 36, 34, 31, 894, 32, 239, 859, 38, 131, 141, 240, 329,
-  186, 743, 103, 113, 265, 283, 71, 922, 119, 667, 528, 531, 81, 660
+  186, 743, 103, 113, 265, 283, 71, 922, 119, 667, 528, 531, 81, 660,
 ];
 
 export default function LivePage() {
@@ -174,103 +174,102 @@ export default function LivePage() {
     }
   };
 
-const fetchMatches = async () => {
-  try {
-    let url = BASE_URL;
+  const fetchMatches = async () => {
+    try {
+      let url = BASE_URL;
 
-    if (viewMode === "live") {
-      url += "?live=all";
-    } else if (viewMode === "today") {
-      const today = new Date().toISOString().split("T")[0];
-      url += `?date=${today}`;
-    } else if (viewMode === "league" && selectedLeagueId !== null) {
-      const today = new Date().toISOString().split("T")[0];
-      url += `?date=${today}`;
-    }
-
-    const response = await fetch(url, {
-      headers: { "x-apisports-key": API_KEY },
-    });
-
-    const data = await response.json();
-
-    let filtered = [];
-
-    // même filtrage que toi
-    if (viewMode === "live") {
-      filtered = data.response.filter((match) =>
-        leagueIdsToInclude.includes(match.league.id)
-      );
-    } else if (viewMode === "today") {
-      filtered = data.response.filter((match) => match.league.id === 61);
-    } else if (viewMode === "league" && selectedLeagueId !== null) {
-      if (selectedLeagueId === -1) {
-        filtered = data.response.filter(
-          (match) => !leagueIdsToInclude.includes(match.league.id)
-        );
-      } else {
-        filtered = data.response.filter(
-          (match) => match.league.id === selectedLeagueId
-        );
+      if (viewMode === "live") {
+        url += "?live=all";
+      } else if (viewMode === "today") {
+        const today = new Date().toISOString().split("T")[0];
+        url += `?date=${today}`;
+      } else if (viewMode === "league" && selectedLeagueId !== null) {
+        const today = new Date().toISOString().split("T")[0];
+        url += `?date=${today}`;
       }
+
+      const response = await fetch(url, {
+        headers: { "x-apisports-key": API_KEY },
+      });
+
+      const data = await response.json();
+
+      let filtered = [];
+
+      // même filtrage que toi
+      if (viewMode === "live") {
+        filtered = data.response.filter((match) =>
+          leagueIdsToInclude.includes(match.league.id)
+        );
+      } else if (viewMode === "today") {
+        filtered = data.response.filter((match) => match.league.id === 61);
+      } else if (viewMode === "league" && selectedLeagueId !== null) {
+        if (selectedLeagueId === -1) {
+          filtered = data.response.filter(
+            (match) => !leagueIdsToInclude.includes(match.league.id)
+          );
+        } else {
+          filtered = data.response.filter(
+            (match) => match.league.id === selectedLeagueId
+          );
+        }
+      }
+
+      // tri
+      const getMatchPriority = (match) => {
+        const round = match.league.round?.toLowerCase() || "";
+
+        const home = match.teams.home.name.toLowerCase();
+        const away = match.teams.away.name.toLowerCase();
+
+        const isClassico =
+          (home.includes("psg") && away.includes("marseille")) ||
+          (home.includes("marseille") && away.includes("psg")) ||
+          (home.includes("real madrid") && away.includes("barcelona")) ||
+          (home.includes("barcelona") && away.includes("real madrid"));
+
+        const isEquipeDeFrance =
+          home.includes("france") || away.includes("france");
+
+        if (isClassico) return 10;
+        if (isEquipeDeFrance) return 9;
+        if (round.includes("final")) return 3;
+        if (round.includes("semi")) return 2;
+        if (round.includes("quarter")) return 1;
+        return 0;
+      };
+
+      filtered.sort((a, b) => {
+        const priorityA = getMatchPriority(a);
+        const priorityB = getMatchPriority(b);
+
+        if (priorityA !== priorityB) return priorityB - priorityA;
+
+        const totalGoalsA = (a.goals.home || 0) + (a.goals.away || 0);
+        const totalGoalsB = (b.goals.home || 0) + (b.goals.away || 0);
+        return totalGoalsB - totalGoalsA;
+      });
+
+      const currentJson = JSON.stringify(matches);
+      const newJson = JSON.stringify(filtered);
+
+      if (currentJson !== newJson) {
+        setMatches(filtered);
+      }
+    } catch (error) {
+      console.error("Erreur fetch:", error);
+      setMatches([]);
+    } finally {
+      setLoading(false);
     }
-
-    // tri
-  const getMatchPriority = (match) => {
-  const round = match.league.round?.toLowerCase() || "";
-
-  const home = match.teams.home.name.toLowerCase();
-  const away = match.teams.away.name.toLowerCase();
-
-  const isClassico =
-    (home.includes("psg") && away.includes("marseille")) ||
-    (home.includes("marseille") && away.includes("psg")) ||
-    (home.includes("real madrid") && away.includes("barcelona")) ||
-    (home.includes("barcelona") && away.includes("real madrid"));
-
-  const isEquipeDeFrance = home.includes("france") || away.includes("france");
-
-  if (isClassico) return 10;       
-  if (isEquipeDeFrance) return 9;  
-  if (round.includes("final")) return 3;
-  if (round.includes("semi")) return 2;
-  if (round.includes("quarter")) return 1;
-  return 0;
-};
-
-    filtered.sort((a, b) => {
-      const priorityA = getMatchPriority(a);
-      const priorityB = getMatchPriority(b);
-
-      if (priorityA !== priorityB) return priorityB - priorityA;
-
-      const totalGoalsA = (a.goals.home || 0) + (a.goals.away || 0);
-      const totalGoalsB = (b.goals.home || 0) + (b.goals.away || 0);
-      return totalGoalsB - totalGoalsA;
-    });
-
-    const currentJson = JSON.stringify(matches);
-    const newJson = JSON.stringify(filtered);
-
-    if (currentJson !== newJson) {
-      setMatches(filtered);
-    }
-
-  } catch (error) {
-    console.error("Erreur fetch:", error);
-    setMatches([]);
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   const renderItem = ({ item }) => {
     const { fixture, teams, goals, league } = item;
     const elapsed = fixture.status.elapsed;
     const isFav =
       favorites?.some((fav) => fav.fixture.id === item.fixture.id) || false;
-    console.log(translateTeamName(teams.home.name))
+    console.log(translateTeamName(teams.home.name));
 
     return (
       <TouchableOpacity
@@ -299,29 +298,32 @@ const fetchMatches = async () => {
         <View style={styles.teams}>
           <View style={styles.teamBlock}>
             <Image source={{ uri: teams.home.logo }} style={styles.logo} />
-             <Text style={styles.team}>{translateTeamName(teams.home.name)}</Text>
+            <Text style={styles.team}>
+              {translateTeamName(teams.home.name)}
+            </Text>
           </View>
 
           <View style={styles.centerBlock}>
- <Text style={styles.time}>
-  {fixture.status.short === "PEN"
-    ? "TAB"
-    : fixture.status.short === "HT"
-    ? "MT"
-    : fixture.status.short === "FT"
-    ? "Terminé"
-    : fixture.status.short === "INT"
-    ? "Interrompu"
-    : fixture.status.short === "PST"
-    ? "En attente"
-    : fixture.status.long === "Extra Time" ||
-      fixture.status.long === "Prolongation" ||
-      (fixture.status.elapsed !== null && fixture.status.elapsed > 90)
-    ? `Prol : ${fixture.status.elapsed}'`
-    : fixture.status.elapsed !== null
-    ? `${fixture.status.elapsed}'`
-    : "En attente"}
-</Text>
+            <Text style={styles.time}>
+              {fixture.status.short === "PEN"
+                ? "TAB"
+                : fixture.status.short === "HT"
+                ? "MT"
+                : fixture.status.short === "FT"
+                ? "Terminé"
+                : fixture.status.short === "INT"
+                ? "Interrompu"
+                : fixture.status.short === "PST"
+                ? "En attente"
+                : fixture.status.long === "Extra Time" ||
+                  fixture.status.long === "Prolongation" ||
+                  (fixture.status.elapsed !== null &&
+                    fixture.status.elapsed > 90)
+                ? `Prol : ${fixture.status.elapsed}'`
+                : fixture.status.elapsed !== null
+                ? `${fixture.status.elapsed}'`
+                : "En attente"}
+            </Text>
 
             <Text style={styles.score}>
               {goals.home} - {goals.away}
@@ -330,7 +332,9 @@ const fetchMatches = async () => {
 
           <View style={styles.teamBlock}>
             <Image source={{ uri: teams.away.logo }} style={styles.logo} />
-              <Text style={styles.team}>{translateTeamName(teams.away.name)}</Text>
+            <Text style={styles.team}>
+              {translateTeamName(teams.away.name)}
+            </Text>
           </View>
         </View>
       </TouchableOpacity>

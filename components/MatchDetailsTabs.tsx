@@ -117,10 +117,8 @@ const YOUTUBE_API_KEY = "AIzaSyBBiYopFRSG7cOfZ65fBzDo-t340WBOT84";
 
 const CHANNELS: Record<string, string> = {
   dazn: "UC3ABnxyYGryqn2bSLyQKkYQ",
-  canal: "UC8ggH3zU61XO0nMskSQwZdA",
+  //canal: "UC8ggH3zU61XO0nMskSQwZdA",
 };
-
-
 
 const fetchMatchSummary = async (homeTeam: string, awayTeam: string) => {
   const queries = [
@@ -212,7 +210,10 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
 
   useEffect(() => {
     if (!matchDetails) return;
-
+    const homeTeam = matchDetails.teams.home.name;
+    const awayTeam = matchDetails.teams.away.name;
+    console.log(matchDetails.teams);
+    loadVideo(homeTeam, awayTeam);
     const fetchLineups = async () => {
       setCompositionLoading(true);
       try {
@@ -406,7 +407,7 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
   const loadVideo = async (homeTeam: string, awayTeam: string) => {
     try {
       const url = await fetchMatchSummary(homeTeam, awayTeam);
-      console.log(homeTeam, awayTeam)
+      console.log(homeTeam, awayTeam);
       console.log("youtube", url);
       setVideoUrl(url); // ← on met à jour le state
     } catch (err) {
@@ -416,12 +417,6 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
 
   useEffect(() => {
     let intervalId: any;
-
-    const homeTeam = matchDetails?.teams.home.name;
-    const awayTeam = matchDetails?.teams.away.name;
-
-    // Charger la vidéo dynamiquement
-    loadVideo(homeTeam || "", awayTeam || "");
 
     const fetchMatchDetails = async () => {
       try {
@@ -597,22 +592,24 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.tabButton,
-                activeTab === "composition" && styles.activeTab,
-              ]}
-              onPress={() => setActiveTab("composition")}
-            >
-              <Text
+            {matchDetails?.fixture.status.short !== "NS" && (
+              <TouchableOpacity
                 style={[
-                  styles.tabText,
-                  activeTab === "composition" && styles.activeTabText,
+                  styles.tabButton,
+                  activeTab === "composition" && styles.activeTab,
                 ]}
+                onPress={() => setActiveTab("composition")}
               >
-                Compos
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTab === "composition" && styles.activeTabText,
+                  ]}
+                >
+                  Compos
+                </Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={[

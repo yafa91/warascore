@@ -47,19 +47,19 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
 
   const getFullPosition = (pos: string) => {
-  switch (pos) {
-    case "G":
-      return "Gardien";
-    case "D":
-      return "Défenseur";
-    case "M":
-      return "Milieu";
-    case "F":
-      return "Attaquant";
-    default:
-      return pos; 
-  }
-};
+    switch (pos) {
+      case "G":
+        return "Gardien";
+      case "D":
+        return "Défenseur";
+      case "M":
+        return "Milieu";
+      case "F":
+        return "Attaquant";
+      default:
+        return pos;
+    }
+  };
 
   const renderPlayer = (
     player: Player,
@@ -134,6 +134,9 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
   const handlePresentModalPress = useCallback(() => {
     bottomSheetModalRef.current?.present();
   }, []);
+  const handleHideModalPress = useCallback(() => {
+    bottomSheetModalRef.current?.close();
+  }, []);
 
   const handlePlayerPress = (player: Player) => {
     setSelectedPlayer(player);
@@ -141,15 +144,14 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
   };
 
   return (
-    <GestureHandlerRootView>
-      <TouchableWithoutFeedback onPress={()=>{
-        alert("coucou")
-      }}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <TouchableWithoutFeedback onPress={handleHideModalPress}>
+        <View style={{ flex: 1 }}>{renderField(handlePlayerPress)}</View>
+      </TouchableWithoutFeedback>
       <BottomSheetModalProvider>
-        <View>{renderField(handlePlayerPress)}</View>
         <BottomSheetModal
           ref={bottomSheetModalRef}
-          snapPoints={[ 280 ]}
+          snapPoints={[280]}
           backgroundStyle={{
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
@@ -157,15 +159,12 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
           }}
           handleIndicatorStyle={{
             backgroundColor: "white",
-            height: 4,                
-            width: 80,                 
+            height: 4,
+            width: 80,
             borderRadius: 3,
           }}
         >
-        
-          <BottomSheetView
-            style={styles.contentContainer}
-          >
+          <BottomSheetView style={styles.contentContainer}>
             {selectedPlayer && (
               <View style={styles.statsContainer}>
                 {/* Photo + Nom */}
@@ -178,25 +177,26 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
                     <Text style={styles.playerNameLarge}>
                       {selectedPlayer.name}
                     </Text>
-                     <Text style={styles.playerInfo}>
-                     #{selectedPlayer.number} • {getFullPosition(selectedPlayer.pos)}
+                    <Text style={styles.playerInfo}>
+                      #{selectedPlayer.number} •{" "}
+                      {getFullPosition(selectedPlayer.pos)}
                     </Text>
-                            <Text style={styles.playerInfo}>
-  Minutes : {selectedPlayer.stats?.games?.minutes ?? 0} |{" "}
-  Note :{" "}
-  <Text
-    style={{
-      color:
-        selectedPlayer.stats?.games?.rating >= 7
-          ? "green"
-          : selectedPlayer.stats?.games?.rating >= 6
-          ? "red"
-          : "white",
-    }}
-  >
-    {selectedPlayer.stats?.games?.rating ?? "-"}
-  </Text>
-</Text>
+                    <Text style={styles.playerInfo}>
+                      Minutes : {selectedPlayer.stats?.games?.minutes ?? 0} |{" "}
+                      Note :{" "}
+                      <Text
+                        style={{
+                          color:
+                            selectedPlayer.stats?.games?.rating >= 7
+                              ? "green"
+                              : selectedPlayer.stats?.games?.rating >= 6
+                              ? "red"
+                              : "white",
+                        }}
+                      >
+                        {selectedPlayer.stats?.games?.rating ?? "-"}
+                      </Text>
+                    </Text>
                   </View>
                 </View>
                 {/* Stats */}
@@ -205,7 +205,10 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
                     <Text style={styles.statItem}>
                       🧤 Arrêts : {selectedPlayer.stats?.goals?.saves ?? 0}
                     </Text>
-                     <Text style={styles.statItem}>🔄 Passes réussies : {selectedPlayer.stats?.passes?.accuracy ?? "0%"}</Text>
+                    <Text style={styles.statItem}>
+                      🔄 Passes réussies :{" "}
+                      {selectedPlayer.stats?.passes?.accuracy ?? "0%"}
+                    </Text>
                     <Text style={styles.statItem}>
                       ❌ Buts encaissés :{" "}
                       {selectedPlayer.stats?.goals?.conceded ?? 0}
@@ -227,8 +230,12 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
                       📊 Passes : {selectedPlayer.stats?.passes?.total ?? 0} (
                       {selectedPlayer.stats?.passes?.accuracy ?? "0%"})
                     </Text>
-                     <Text style={styles.statItem}>🎁 Passes clés : {selectedPlayer.stats?.passes?.key ?? 0}</Text>
-                    <Text style={styles.statItem}>⚔️ Duels gagnés : {selectedPlayer.stats?.duels?.won ?? 0}</Text>
+                    <Text style={styles.statItem}>
+                      🎁 Passes clés : {selectedPlayer.stats?.passes?.key ?? 0}
+                    </Text>
+                    <Text style={styles.statItem}>
+                      ⚔️ Duels gagnés : {selectedPlayer.stats?.duels?.won ?? 0}
+                    </Text>
                     <Text style={styles.statItem}>
                       Jaunes 🟨 : {selectedPlayer.stats?.cards?.yellow ?? 0} |
                       Rouges 🟥 : {selectedPlayer.stats?.cards?.red ?? 0}
@@ -240,7 +247,6 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
           </BottomSheetView>
         </BottomSheetModal>
       </BottomSheetModalProvider>
-      </TouchableWithoutFeedback>
     </GestureHandlerRootView>
   );
 };

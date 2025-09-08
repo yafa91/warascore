@@ -45,7 +45,7 @@ export const FavoritesProvider = ({
   const isFavorite = useCallback(
     (matchId: number) => {
       const result = favorites.some((fav) => fav.fixture.id === matchId);
-      console.log("🔍 Vérification favori pour match", matchId, ":", result);
+    //  console.log("🔍 Vérification favori pour match", matchId, ":", result);
       return result;
     },
     [favorites]

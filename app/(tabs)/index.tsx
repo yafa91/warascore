@@ -11,7 +11,7 @@ import {
   Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { router, useRouter } from "expo-router";
 import { useFavorites } from "@/context/FavoritesContext";
 
@@ -290,7 +290,7 @@ export function AppContent() {
           98, 135, 136, 140, 143, 2000, 2001, 2002, 203, 253, 263, 264, 266,
           292, 307, 848, 210, 30, 15, 858, 36, 34, 31, 894, 32, 239, 859, 38,
           131, 141, 240, 329, 186, 743, 103, 113, 265, 283, 71, 922, 119, 667,
-          528, 531, 81, 29, 
+          528, 531, 81, 29,
         ];
 
         const europeanMatches = allMatches.filter((match: Match) =>
@@ -336,45 +336,45 @@ export function AppContent() {
     );
   });
 
- const isPriorityMatch = (match: Match) => {
-  const round = (match.league.round || "").toLowerCase();
-  const home = match.teams.home.name.toLowerCase();
-  const away = match.teams.away.name.toLowerCase();
+  const isPriorityMatch = (match: Match) => {
+    const round = (match.league.round || "").toLowerCase();
+    const home = match.teams.home.name.toLowerCase();
+    const away = match.teams.away.name.toLowerCase();
 
-  if (
-    round.includes("semi") ||
-    round.includes("demi") ||
-    round.includes("final")
-  ) {
-    return true;
-  }
-
-  const classicoPairs = [
-    ["paris", "marseille"],
-    ["real", "barcelona"],
-    ["liverpool", "manchester united"],
-    ["arsenal", "tottenham"],
-    ["inter", "milan"],
-    ["juventus", "torino"],
-    ["roma", "lazio"],
-    ["bayern", "dortmund"],
-  ];
-
-  for (const [team1, team2] of classicoPairs) {
     if (
-      (home.includes(team1) && away.includes(team2)) ||
-      (home.includes(team2) && away.includes(team1))
+      round.includes("semi") ||
+      round.includes("demi") ||
+      round.includes("final")
     ) {
       return true;
     }
-  }
 
-  if (home.includes("france") || away.includes("france")) {
-    return true;
-  }
+    const classicoPairs = [
+      ["paris", "marseille"],
+      ["real", "barcelona"],
+      ["liverpool", "manchester united"],
+      ["arsenal", "tottenham"],
+      ["inter", "milan"],
+      ["juventus", "torino"],
+      ["roma", "lazio"],
+      ["bayern", "dortmund"],
+    ];
 
-  return false;
-};
+    for (const [team1, team2] of classicoPairs) {
+      if (
+        (home.includes(team1) && away.includes(team2)) ||
+        (home.includes(team2) && away.includes(team1))
+      ) {
+        return true;
+      }
+    }
+
+    if (home.includes("france") || away.includes("france")) {
+      return true;
+    }
+
+    return false;
+  };
 
   const sortedLiveMatches = [...liveMatches].sort((a, b) => {
     const aPriority = isPriorityMatch(a) ? 0 : 1;
@@ -405,9 +405,9 @@ export function AppContent() {
   const { width } = Dimensions.get("window");
 
   const getResponsiveFontSize = (size: number) => {
-    if (width < 360) return size * 0.85; 
-    if (width > 768) return size * 1.2; 
-    return size; 
+    if (width < 360) return size * 0.85;
+    if (width > 768) return size * 1.2;
+    return size;
   };
 
   const fontSize = getResponsiveFontSize(14);
@@ -806,7 +806,7 @@ const translateTeamName = (name: string) => {
     "Bogota FC": "Bogota",
     "Brown DE Adrogue": "Brown Adrogue",
     "Santiago Morning": "S.Morning",
-    "Germany": "Allemagne",
+    Germany: "Allemagne",
     "FC Copenhagen": "Copenhague",
     "Poland W": "Pologne",
     "Netherlands W": "Pays-Bas",
@@ -817,8 +817,8 @@ const translateTeamName = (name: string) => {
     "Kristiansund BK": "Kristiansund",
     "BK Hacken": "Hacken",
     "Sweden W": "Suède",
-    "Sweden": "Suède",
-    "Sevilla": "FC Séville",
+    Sweden: "Suède",
+    Sevilla: "FC Séville",
     "Athletic Club": "Ath. Bilbao",
     "SC Braga": "Braga",
     "Belgium W": "Belgique",
@@ -834,9 +834,9 @@ const translateTeamName = (name: string) => {
     "Shimizu S-pulse": "Shimizu",
     "Yokohama F. Marinos": "Yokohama",
     "Rep. Of Ireland": "Irlande",
-    "Hungary": "Hongrie",
-    "Austria": "Autriche",
-    "Cyprus": "Chypre",
+    Hungary: "Hongrie",
+    Austria: "Autriche",
+    Cyprus: "Chypre",
     "San Marino": "Saint-Martin",
     "Kawazaki Frontale": "Kawazaki",
     "Union San Felipe": "San Filipe",
@@ -862,10 +862,10 @@ const translateTeamName = (name: string) => {
     "Olympique de Marseille": "OM",
     "Borussia Dortmund": "Dortmund",
     "Deportes Temuco": "Temuco",
-    "Cambodia": "Cambodge",
+    Cambodia: "Cambodge",
     "Saudi Arabia": "Arabie Saoudite",
-    "Malta": "Malte",
-    "Lithuania": "Lituanie",
+    Malta: "Malte",
+    Lithuania: "Lituanie",
     "RB Leipzig": "Leipzig",
     "Northern Ireland": "Irlande du Nord",
     "Algeria W": "Algerie",
@@ -879,105 +879,105 @@ const translateTeamName = (name: string) => {
     "Chelsea FC": "Chelsea",
     "Liverpool FC": "Liverpool",
     "Manchester City": "Man City",
-    "Belgium": "Belgique",
-    "Spain": "Espagne",
+    Belgium: "Belgique",
+    Spain: "Espagne",
     "Italy W": "Italie",
     "Dinamo Minsk": "Din.Minsk",
     "Inter Club d'Escaldes": "Inter",
-    "England": "Angleterre",
+    England: "Angleterre",
     "Eintracht Frankfurt": "Francfort",
     "VfL Wolfsburg": "Wolfsburg",
     "Portugal W": "Portugal",
     "West Ham United": "West Ham",
     "Inter Miami CF": "Inter Miami",
     "Equatorial Guinea": "Guinée Equatoriale",
-    "Zambia": "Zambie",
-    "Chad": "Tchad",
-    "Somalia": "Somalie",
-    "Guinea": "Guinée",
+    Zambia: "Zambie",
+    Chad: "Tchad",
+    Somalia: "Somalie",
+    Guinea: "Guinée",
     "Guinea-Bissau": "Guinée-Bissau",
-    "Brazil": "Brésil",
-    "Argentina": "Argentine",
+    Brazil: "Brésil",
+    Argentina: "Argentine",
     "Newcastle United": "Newcastle",
     "Bayern München": "Bayern",
     "São Paulo FC": "São Paulo",
-    "Japan": "Japon",
+    Japan: "Japon",
     "South Korea": "Corée du Sud",
     "United States": "États-Unis",
-    "Mexico": "Mexique",
-    "Australia": "Australie",
+    Mexico: "Mexique",
+    Australia: "Australie",
     "Haverfordwest County AFC": "Haverfordwest",
     "FC Differdange 03": "Differdange",
     "The New Saints": "TNS",
     "Vikingur Gota": "Vikingur",
     "Egnatia Rrogozhinë": "Egnatia",
     "Lincoln Red Imps FC": "Lincoln",
-    "Canada": "Canada",
+    Canada: "Canada",
     "Olimpija Ljubljana": "Olimpija",
     "Kairat Almaty": "Kairaty",
     "Seattle Sounders": "Seattle",
     "Columbus Crew": "Columbus",
-    "Netherlands": "Pays-Bas",
+    Netherlands: "Pays-Bas",
     "Olympiacos FC": "Olympiakos",
     "Panathinaikos FC": "Panathinaikos",
     "AEK Athens FC": "AEK Athènes",
-    "Croatia": "Croatie",
+    Croatia: "Croatie",
     "CS Constantine": "Constantine",
     "Villa San Carlos": "San Carlos",
-    "Napoli": "Naples",
-    "Italy": "Italie",
-    "Denmark": "Danemark",
-    "Scotland": "Ecosse",
-    "Estonia": "Estonie",
+    Napoli: "Naples",
+    Italy: "Italie",
+    Denmark: "Danemark",
+    Scotland: "Ecosse",
+    Estonia: "Estonie",
     "Faroe Islands": "Ile Féroé",
-    "Moldova": "Moldavie",
+    Moldova: "Moldavie",
     "Switzerland W": "Suisse",
-    "Switzerland": "Suisse",
+    Switzerland: "Suisse",
     "Iceland W": "Islande",
-    "Greece": "Grèce",
-    "Belarus": "Biélorussie",
-    "Iceland": "Islande",
-    "Poland": "Pologne",
+    Greece: "Grèce",
+    Belarus: "Biélorussie",
+    Iceland: "Islande",
+    Poland: "Pologne",
     "Norway W": "Norvège",
     "Finland W": "Finlande",
-    "Serbia": "Serbie",
-    "Turkey": "Turquie",
-    "Iran": "Iran",
+    Serbia: "Serbie",
+    Turkey: "Turquie",
+    Iran: "Iran",
     "Djurgardens IF": "Djurgarden",
     "Morocco W": "Maroc",
-    "Ghana": "Ghana",
-    "Cameroon": "Cameroun",
-    "Uzbekistan": "Ouzbekistant",
+    Ghana: "Ghana",
+    Cameroon: "Cameroun",
+    Uzbekistan: "Ouzbekistant",
     "Wales W": "Pays de Galles",
     "Ivory Coast": "Côte d'Ivoire",
-    "Nigeria": "Nigéria",
+    Nigeria: "Nigéria",
     "South Africa": "Afrique du Sud",
-    "China": "Chine",
-    "Qatar": "Qatar",
-    "Egypt": "Égypte",
-    "Tunisia": "Tunisie",
+    China: "Chine",
+    Qatar: "Qatar",
+    Egypt: "Égypte",
+    Tunisia: "Tunisie",
     "Flora Tallinn": "Flora",
     "Kalju Nomme": "Kalju",
     "Deportivo Armenio": "D. Armenio",
     "Cliftonville FC": "Cliftonville",
     "West Ham United U21": "West Ham 21",
-    "Wales": "Pays de Galles",
-    "Bulgaria": "Bulgarie",
-    "Georgia": "Georgie",
-    "Slovakia": "Slovaquie",
-    "Slovenia": "Slovenie",
-    "Türkiye": "Turquie",
+    Wales: "Pays de Galles",
+    Bulgaria: "Bulgarie",
+    Georgia: "Georgie",
+    Slovakia: "Slovaquie",
+    Slovenia: "Slovenie",
+    Türkiye: "Turquie",
     "Boreham Wood": "Boreham",
-    "Algeria": "Algérie",
-    "Uruguay": "Uruguay",
+    Algeria: "Algérie",
+    Uruguay: "Uruguay",
     "Hebburn Town": "Hebburn",
     "Deportes Tolima": "D. Tolima",
     "Alianza Petrolera": "Alianza",
     "Spennymoor Town": "Spennymoor",
-    "Morocco": "Maroc",
-    "Grêmio": "Grêmio",
+    Morocco: "Maroc",
+    Grêmio: "Grêmio",
     "Atlético Mineiro": "Atlético MG",
-    "Internacional": "Internacional",
+    Internacional: "Internacional",
     "Santos FC": "Santos",
     "Al-Nassr FC": "Al Nassr",
     "New York City FC": "New York City",
@@ -988,22 +988,32 @@ const translateTeamName = (name: string) => {
     "CFR 1907 Cluj": "CFR Cluj",
     "Hapoel Beer Sheva": "H. Beer Sheva",
     "St Joseph S Fc": "St Josephs",
-    "Comoros":"Comores",
+    Comoros: "Comores",
     "Central African Republic": "Centrafique",
     "Al-Ahli Saudi FC": "Al Ahli",
     "Atlètic Club d'Escaldes": "Atletic Escaldes",
     "F91 Dudelange": "Dudelange",
     "PSV Eindhoven": "PSV",
-    "Senegal": "Sénégal",
+    Senegal: "Sénégal",
   };
   return translations[name] || name;
 };
 
 const LiveScore = ({ item }: { item: Match }) => {
+  const { favorites, toggleFavorite: toggleFavoriteContext } = useFavorites();
+
   const router = useRouter();
   const handleDetailsPress = () => {
     console.log("Match ID :", item.fixture.id);
     router.push(`/MatchDetailsScreen/${item.fixture.id}`);
+  };
+
+  const toggleFavorite = async (item: any, isFav: boolean) => {
+    try {
+      await toggleFavoriteContext(item);
+    } catch (error) {
+      console.error("Erreur lors de la modification des favoris:", error);
+    }
   };
 
   const elapsed = item.fixture.status.elapsed;
@@ -1036,6 +1046,12 @@ const LiveScore = ({ item }: { item: Match }) => {
       ? `${elapsed}’`
       : "";
 
+  const { fixture, teams, goals, league } = item;
+
+  const isFav =
+    favorites?.some((fav) => fav.fixture.id === item.fixture.id) || false;
+  console.log(translateTeamName(teams.home.name));
+
   return (
     <View
       style={[
@@ -1051,33 +1067,49 @@ const LiveScore = ({ item }: { item: Match }) => {
       <View
         style={{
           flexDirection: "row",
-          justifyContent: "flex-start",
+          justifyContent: "space-between",
           alignItems: "center",
           marginBottom: 10,
+          paddingHorizontal: 5,
         }}
       >
-        <Image
-          source={{ uri: item.league.logo }}
+        <View
           style={{
-            width: 30,
-            height: 30,
-            resizeMode: "contain",
-            marginRight: 8,
+            flexDirection: "row",
+            justifyContent: "flex-start",
+            alignItems: "center",
           }}
-        />
-        <Text
-          style={[
-            styles.league,
-            {
-              textAlign: "left",
-              marginTop: 3,
-            },
-          ]}
-          numberOfLines={1}
-          ellipsizeMode="tail"
         >
-          {item.league.name}
-        </Text>
+          <Image
+            source={{ uri: item.league.logo }}
+            style={{
+              width: 30,
+              height: 30,
+              resizeMode: "contain",
+              marginRight: 8,
+            }}
+          />
+          <Text
+            style={[
+              styles.league,
+              {
+                textAlign: "left",
+                marginTop: 3,
+              },
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {item.league.name}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={() => toggleFavorite(item, isFav)}>
+          <Feather
+            name={isFav ? "bell-off" : "bell"}
+            size={20}
+            color={isFav ? "red" : "#fff"}
+          />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.liveScoreBlock}>
@@ -1129,7 +1161,7 @@ const ScoreList = ({
   item: Match;
   onToggleFavorite: (match: any) => void;
 }) => {
-  console.log(item);
+  //console.log(item);
   const router = useRouter();
   const { isFavorite } = useFavorites();
   const time = new Date(item.fixture.date).toLocaleTimeString([], {

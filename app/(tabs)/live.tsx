@@ -69,7 +69,7 @@ const leagueIdsToInclude = [
   1, 2, 3, 4, 5, 6, 9, 11, 13, 14, 16, 17, 39, 40, 61, 62, 78, 88, 94, 98, 135,
   136, 140, 143, 2000, 2001, 2002, 98, 307, 203, 253, 263, 264, 266, 292, 307,
   848, 210, 30, 15, 858, 36, 34, 31, 894, 32, 239, 859, 38, 131, 141, 240, 329,
-  186, 743, 103, 113, 265, 283, 71, 922, 119, 667, 528, 531, 81
+  186, 743, 103, 113, 265, 283, 71, 922, 119, 667, 528, 531, 81, 660
 ];
 
 export default function LivePage() {
@@ -216,13 +216,27 @@ const fetchMatches = async () => {
     }
 
     // tri
-    const getMatchPriority = (match) => {
-      const round = match.league.round?.toLowerCase() || "";
-      if (round.includes("final")) return 3;
-      if (round.includes("semi")) return 2;
-      if (round.includes("quarter")) return 1;
-      return 0;
-    };
+  const getMatchPriority = (match) => {
+  const round = match.league.round?.toLowerCase() || "";
+
+  const home = match.teams.home.name.toLowerCase();
+  const away = match.teams.away.name.toLowerCase();
+
+  const isClassico =
+    (home.includes("psg") && away.includes("marseille")) ||
+    (home.includes("marseille") && away.includes("psg")) ||
+    (home.includes("real madrid") && away.includes("barcelona")) ||
+    (home.includes("barcelona") && away.includes("real madrid"));
+
+  const isEquipeDeFrance = home.includes("france") || away.includes("france");
+
+  if (isClassico) return 10;       
+  if (isEquipeDeFrance) return 9;  
+  if (round.includes("final")) return 3;
+  if (round.includes("semi")) return 2;
+  if (round.includes("quarter")) return 1;
+  return 0;
+};
 
     filtered.sort((a, b) => {
       const priorityA = getMatchPriority(a);

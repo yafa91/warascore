@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "transparent",
   },
   activeTab: {
-    borderBottomColor: "#FFFFFF",
+    borderBottomColor: "#f33",
     borderBottomWidth: 2,
     paddingHorizontal: 5,
     alignSelf: "center",

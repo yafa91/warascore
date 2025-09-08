@@ -6,11 +6,13 @@ import {
   ImageBackground,
   Image,
   TouchableOpacity,
+  TouchableWithoutFeedback,
 } from "react-native";
 import {
   BottomSheetModal,
   BottomSheetModalProvider,
   BottomSheetScrollView,
+  BottomSheetView,
 } from "@gorhom/bottom-sheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
@@ -43,6 +45,21 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
   awayTeam = [],
 }) => {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+
+  const getFullPosition = (pos: string) => {
+  switch (pos) {
+    case "G":
+      return "Gardien";
+    case "D":
+      return "Défenseur";
+    case "M":
+      return "Milieu";
+    case "F":
+      return "Attaquant";
+    default:
+      return pos; 
+  }
+};
 
   const renderPlayer = (
     player: Player,
@@ -114,7 +131,6 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
 
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
 
-  // callbacks
   const handlePresentModalPress = useCallback(() => {
     bottomSheetModalRef.current?.present();
   }, []);
@@ -126,22 +142,29 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
 
   return (
     <GestureHandlerRootView>
+      <TouchableWithoutFeedback onPress={()=>{
+        alert("coucou")
+      }}>
       <BottomSheetModalProvider>
         <View>{renderField(handlePlayerPress)}</View>
         <BottomSheetModal
           ref={bottomSheetModalRef}
-          snapPoints={[250]}
+          snapPoints={[ 280 ]}
           backgroundStyle={{
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
             backgroundColor: "#121212",
           }}
           handleIndicatorStyle={{
-            backgroundColor: "red",
+            backgroundColor: "white",
+            height: 4,                
+            width: 80,                 
+            borderRadius: 3,
           }}
         >
-          <BottomSheetScrollView
-            contentContainerStyle={styles.contentContainer}
+        
+          <BottomSheetView
+            style={styles.contentContainer}
           >
             {selectedPlayer && (
               <View style={styles.statsContainer}>
@@ -155,25 +178,41 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
                     <Text style={styles.playerNameLarge}>
                       {selectedPlayer.name}
                     </Text>
-                    <Text style={styles.playerInfo}>
-                      #{selectedPlayer.number} • {selectedPlayer.pos}
+                     <Text style={styles.playerInfo}>
+                     #{selectedPlayer.number} • {getFullPosition(selectedPlayer.pos)}
                     </Text>
-                    <Text style={styles.playerInfo}>
-                      Minutes : {selectedPlayer.stats?.games?.minutes ?? 0} |
-                      Note : {selectedPlayer.stats?.games?.rating ?? "-"}
-                    </Text>
+                            <Text style={styles.playerInfo}>
+  Minutes : {selectedPlayer.stats?.games?.minutes ?? 0} |{" "}
+  Note :{" "}
+  <Text
+    style={{
+      color:
+        selectedPlayer.stats?.games?.rating >= 7
+          ? "green"
+          : selectedPlayer.stats?.games?.rating >= 6
+          ? "red"
+          : "white",
+    }}
+  >
+    {selectedPlayer.stats?.games?.rating ?? "-"}
+  </Text>
+</Text>
                   </View>
                 </View>
-
                 {/* Stats */}
                 {selectedPlayer.pos === "G" ? (
                   <View style={styles.statsGrid}>
                     <Text style={styles.statItem}>
                       🧤 Arrêts : {selectedPlayer.stats?.goals?.saves ?? 0}
                     </Text>
+                     <Text style={styles.statItem}>🔄 Passes réussies : {selectedPlayer.stats?.passes?.accuracy ?? "0%"}</Text>
                     <Text style={styles.statItem}>
                       ❌ Buts encaissés :{" "}
                       {selectedPlayer.stats?.goals?.conceded ?? 0}
+                    </Text>
+                    <Text style={styles.statItem}>
+                      Carton : 🟨 : {selectedPlayer.stats?.cards?.yellow ?? 0} |
+                      🟥 : {selectedPlayer.stats?.cards?.red ?? 0}
                     </Text>
                   </View>
                 ) : (
@@ -188,17 +227,20 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
                       📊 Passes : {selectedPlayer.stats?.passes?.total ?? 0} (
                       {selectedPlayer.stats?.passes?.accuracy ?? "0%"})
                     </Text>
+                     <Text style={styles.statItem}>🎁 Passes clés : {selectedPlayer.stats?.passes?.key ?? 0}</Text>
+                    <Text style={styles.statItem}>⚔️ Duels gagnés : {selectedPlayer.stats?.duels?.won ?? 0}</Text>
                     <Text style={styles.statItem}>
-                      🟨 Jaunes : {selectedPlayer.stats?.cards?.yellow ?? 0} |
-                      🟥 Rouges : {selectedPlayer.stats?.cards?.red ?? 0}
+                      Jaunes 🟨 : {selectedPlayer.stats?.cards?.yellow ?? 0} |
+                      Rouges 🟥 : {selectedPlayer.stats?.cards?.red ?? 0}
                     </Text>
                   </View>
                 )}
               </View>
             )}
-          </BottomSheetScrollView>
+          </BottomSheetView>
         </BottomSheetModal>
       </BottomSheetModalProvider>
+      </TouchableWithoutFeedback>
     </GestureHandlerRootView>
   );
 };
@@ -252,17 +294,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   playerPhotoLarge: {
-    width: 70,
-    height: 70,
+    width: 58,
+    height: 58,
     borderRadius: 35,
   },
   playerNameLarge: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "bold",
     color: "white",
   },
   playerInfo: {
-    fontSize: 14,
+    fontSize: 15,
     color: "gray",
   },
   statsGrid: {

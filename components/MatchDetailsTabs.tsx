@@ -120,6 +120,8 @@ const CHANNELS: Record<string, string> = {
   canal: "UC8ggH3zU61XO0nMskSQwZdA",
 };
 
+
+
 const fetchMatchSummary = async (homeTeam: string, awayTeam: string) => {
   const queries = [
     `résumé de ${homeTeam} vs. ${awayTeam}`,
@@ -404,6 +406,7 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
   const loadVideo = async (homeTeam: string, awayTeam: string) => {
     try {
       const url = await fetchMatchSummary(homeTeam, awayTeam);
+      console.log(homeTeam, awayTeam)
       console.log("youtube", url);
       setVideoUrl(url); // ← on met à jour le state
     } catch (err) {

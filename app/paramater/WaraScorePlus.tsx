@@ -40,7 +40,7 @@ export default function WaraScorePlus() {
       </View>
       <View style={styles.bulletRow}>
         <Text style={styles.bullet}>✓</Text>
-        <Text style={styles.bulletText}>Parie fun entre potes</Text>
+        <Text style={styles.bulletText}>Parie gratuitement avec tes amis</Text>
       </View>
       <View style={styles.bulletRow}>
         <Text style={styles.bullet}>✓</Text>

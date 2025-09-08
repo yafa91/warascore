@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useLayoutEffect } from "react";
+ import React, { useEffect, useRef, useState, useLayoutEffect } from "react";
 import { useNavigation } from "expo-router";
 import {
   View,
@@ -25,6 +25,14 @@ export const translateTeamName = (name: string): string => {
     "Shimizu S-pulse": "Shimizu",
     "Yokohama F. Marinos": "Yokohama",
     "Georgia": "Georgie",
+    "Rapid Vienna": "Rapid Vienne",
+    "Slovenia": "Slovenie",
+    "Sweden": "Suède",
+    "Switzerland": "Suisse",
+     "Iceland W": "Islande",
+    "Greece": "Grèce",
+    "Belarus": "Biélorussie",
+    "Iceland": "Islande",
     "Malta": "Malte",
     "Lithuania": "Lituanie",
     "Northern Ireland": "Irlande du Nord",
@@ -57,7 +65,7 @@ export const translateTeamName = (name: string): string => {
     "Deportes Tolima": "D. Tolima",
     "Alianza Petrolera": "Alianza",
     "IFK Norrkoping": "Norrkoping",
-    "Senegal W": "Sénégal",
+    "Senegal": "Senegal",
     "Deportivo Armenio": "D. Armenio",
     "Gangwon FC": "Gangwon",
     "Daejeon Citizen": "Daejeon",
@@ -82,9 +90,12 @@ export const translateTeamName = (name: string): string => {
     "Netherlands W": "Pays-Bas",
     "Wales W": "Pays de Galles",
     "Belgium W": "Belgique",
+    "Belgium": "Belgique",
     "Inter Club d'Escaldes": "Inter",
     "Portugal W": "Portugal",
     "Spain W": "Espagne",
+    "Tanzania": "Tanzanie",
+    "Spain": "Espagne",
     "Morocco W": "Maroc",
     "Los Angeles FC": "LAFC",
     "Dinamo Minsk": "Din.Minsk",
@@ -92,9 +103,9 @@ export const translateTeamName = (name: string): string => {
     "Sheriff Tiraspol": "S. Tiraspol",
     "Hamrun Spartans": "Hamrun",
     "Italy W": "Italie",
+    "Italy": "italie",
     "Sweden W": "Suède",
     "Santiago Morning": "S.Morning",
-    "Iceland W": "Islande",
     "Norway W": "Norvège", 
     "Finland W": "Finlande",
     "BK Hacken": "Hacken",
@@ -108,8 +119,6 @@ export const translateTeamName = (name: string): string => {
     "England W": "Angleterre",
     "Liverpool FC": "Liverpool",
     "Manchester City": "Man City",
-    "Belgium": "Belgique",
-    "Italy": "Italie",
     "England": "Angleterre",
     "Eintracht Frankfurt": "Francfort",
     "VfL Wolfsburg": "Wolfsburg",
@@ -135,6 +144,12 @@ export const translateTeamName = (name: string): string => {
     "Cambodia": "Cambodge",
     "San Marcos de Arica": "Arica",
     "Newcastle United": "Newcastle",
+    "Equatorial Guinea": "Guinée Equatoriale",
+    "Zambia": "Zambie",
+    "Chad": "Tchad",
+    "Somalia": "Somalie",
+    "Guinea": "Guinée",
+    "Guinea-Bissau": "Guinée-Bissau",
     "Union San Felipe": "San Filipe",
     "São Paulo FC": "São Paulo",
     "Mali W": "Mali",
@@ -168,15 +183,23 @@ export const translateTeamName = (name: string): string => {
     "FC Botosani": "Botosani",
     "Poland": "Pologne",
     "Serbia": "Serbie",
+    "Moldova": "Moldavie",
+    "CS Constantine": "Constantine",
+    "Villa San Carlos": "San Carlos",
+    "Czech Republic": "République Tchèque",
+    "Denmark": "Danemark",
+    "Scotland": "Ecosse",
+    "Estonia": "Estonie",
+    "Faroe Islands": "Ile Féroé",
     "Saudi Arabia W ": "Arabie Saoudite",
     "Turkey": "Turquie",
     "Cameroon": "Cameroun",
     "Ivory Coast": "Côte d'Ivoire",
     "Nigeria": "Nigéria",
-    "Wales": "Pays de Galles",
     "South Africa": "Afrique du Sud",
     "China": "Chine",
     "France W": "France",
+    "France": "France",
     "Qatar": "Qatar",
     "Egypt": "Égypte",
     "Tunisia": "Tunisie",
@@ -188,8 +211,16 @@ export const translateTeamName = (name: string): string => {
     "Morocco": "Maroc",
     "AFC Hermannstadt": "Hermannstadt",
     "Grêmio": "Grêmio",
+    "AD Ceuta FC": "AD Ceuta",
     "Atlético Mineiro": "Atlético MG",
+    "Central African Republic": "Centrafique",
     "Internacional": "Internacional",
+    "Rep. Of Ireland": "Irlande",
+    "Hungary": "Hongrie",
+    "Austria": "Autriche",
+    "Cyprus": "Chypre",
+    "Comoros":"Comores",
+    "San Marino": "Saint-Martin",
     "Santos FC": "Santos",
     "Al-Nassr FC": "Al Nassr",
     "Al-Ittihad Club": "Al Ittihad",
@@ -198,7 +229,6 @@ export const translateTeamName = (name: string): string => {
     "Maccabi Tel Aviv": "M. Tel Aviv",
     "Bangladesh": "Bangladesh",
     "PSV Eindhoven": "PSV",
-    "Senegal": "Sénégal",
   };
 
   return translations[name] || name;
@@ -209,6 +239,67 @@ const normalizeString = (str: string): string => {
     .normalize("NFD")                
     .replace(/[\u0300-\u036f]/g, "") 
     .toLowerCase();                  
+};
+
+const searchTranslations: { [key: string]: string } = {
+  "espagne": "spain",
+  "angleterre": "england",
+  "allemagne": "germany",
+  "tanzanie": "tanzania",
+  "italie": "italy",
+  "italy": "italy",
+  "france": "france",
+  "comores": "comoros",
+  "pays bas": "netherlands",
+  "portugal": "portugal",
+  "belgique": "belgium",
+  "argentine": "argentina",
+  "centrafique":"Central African Republic",
+  "bresil": "brazil",
+  "psg": "paris saint germain",
+  "paris": "paris saint germain",
+  "om": "olympique de marseille",
+  "man united": "manchester united",
+  "man city": "manchester city",
+  "real": "real madrid",
+  "brésil": "brazil",
+  "maroc": "morocco",
+  "tunisie": "tunisia",
+  "algerie": "algeria",
+  "bulgarie": "bulgaria",
+  "senegal": "senegal",
+  "etats unis": "united states",
+  "états unis": "united states",
+  "mexique": "mexico",
+  "cameroun": "cameroon",
+  "cote d'ivoire": "ivory coast",
+};
+
+const getSearchQuery = (input: string): string => {
+  const normalized = normalizeString(input);
+  return searchTranslations[normalized] || input;
+};
+
+const sortMatchesByPriority = (matches) => {
+  const today = new Date();
+  const tomorrow = new Date();
+  tomorrow.setDate(today.getDate() + 1);
+  const dayAfterTomorrow = new Date();
+  dayAfterTomorrow.setDate(today.getDate() + 2);
+
+  const liveStatuses = ["1H", "2H", "ET", "P", "LIVE", "HT", "BT", "INT"];
+
+  const isLive = (match) => liveStatuses.includes(match.fixture.status.short);
+  const isTodayOrTomorrow = (match) => {
+    const date = new Date(match.fixture.date);
+    return date >= today && date <= dayAfterTomorrow;
+  };
+
+  const liveMatches = matches.filter(isLive);
+  const upcomingMatches = matches.filter((m) => !isLive(m) && isTodayOrTomorrow(m));
+  const otherMatches = matches.filter((m) => !isLive(m) && !isTodayOrTomorrow(m));
+
+  return [...liveMatches, ...upcomingMatches, ...otherMatches];
 };
 
 const LiveBadge = () => {
@@ -266,7 +357,7 @@ export default function SearchScreen() {
         const today = new Date();
 
         const days = [];
-        for (let i = -20; i <= 30; i++) {
+        for (let i = -30; i <= 50; i++) {
           const d = new Date();
           d.setDate(today.getDate() + i);
           days.push(d);
@@ -286,42 +377,57 @@ export default function SearchScreen() {
   }, []);
 
   useEffect(() => {
-    if (searchText.length < 2) {
+  if (searchText.length < 2) {
+    setSearchResults([]);
+    return;
+  }
+  const fetchTeamMatches = async () => {
+  try {
+    setLoading(true);
+
+    const query = getSearchQuery(searchText);
+
+    const teamRes = await fetch(
+      `https://v3.football.api-sports.io/teams?search=${query}`,
+      { headers: { "x-apisports-key": API_KEY } }
+    );
+    const teamJson = await teamRes.json();
+
+    if (!teamJson.response || teamJson.response.length === 0) {
       setSearchResults([]);
+      setLoading(false);
       return;
     }
 
-  const normalizedText = normalizeString(searchText);
-  const allowedLeagueIds = [
-  1, 2, 3, 4, 5, 6, 9, 11, 13, 14, 16, 17, 39, 40, 61, 62, 78, 88, 94,
-  98, 135, 136, 140, 143, 2000, 2001, 2002, 203, 253, 263, 264, 266,
-  292, 307, 848, 210, 30, 15, 858, 36, 34, 31, 894, 32, 239, 859, 38,
-  131, 141, 240, 329, 186, 743, 103, 113, 265, 283, 71, 922, 119, 667, 528, 531, 81	
-];
+    const nationalTeam = teamJson.response.find((t) => t.team?.national === true);
 
-const filtered = matches.filter((match) => {
-  const leagueId = match.league.id;
-  if (!allowedLeagueIds.includes(leagueId)) return false;
+    const selectedTeam = nationalTeam || teamJson.response[0];
+    const teamId = selectedTeam.team.id;
 
-  const homeRaw = normalizeString(match.teams.home.name);
-  const awayRaw = normalizeString(match.teams.away.name);
-  const homeTranslated = normalizeString(translateTeamName(match.teams.home.name));
-  const awayTranslated = normalizeString(translateTeamName(match.teams.away.name));
-  const league = normalizeString(match.league.name);
-  const date = normalizeString(match.fixture.date);
+    const [lastRes, nextRes] = await Promise.all([
+      fetch(`${API_URL}?team=${teamId}&last=5`, {
+        headers: { "x-apisports-key": API_KEY },
+      }),
+      fetch(`${API_URL}?team=${teamId}&next=5`, {
+        headers: { "x-apisports-key": API_KEY },
+      }),
+    ]);
 
-  return (
-    homeRaw.includes(normalizedText) ||
-    awayRaw.includes(normalizedText) ||
-    homeTranslated.includes(normalizedText) ||
-    awayTranslated.includes(normalizedText) ||
-    league.includes(normalizedText) ||
-    date.includes(normalizedText)
-  );
-});
+    const lastJson = await lastRes.json();
+    const nextJson = await nextRes.json();
 
-    setSearchResults(filtered);
-  }, [searchText, matches]);
+    const allMatches = [...(lastJson.response || []), ...(nextJson.response || [])];
+    setSearchResults(sortMatchesByPriority(allMatches));
+  } catch (error) {
+    console.error("Erreur lors de la recherche :", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+  fetchTeamMatches();
+}, [searchText]);
+
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -365,7 +471,7 @@ const filtered = matches.filter((match) => {
           keyExtractor={(item) => item.fixture.id.toString()}
           renderItem={renderItem}
         />
-      ) : searchText.length >= 3 ? (
+      ) : searchText.length >= 2 ? (
         <Text style={styles.noResultText}>Aucun match trouvé.</Text>
       ) : null}
     </View>

@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#333',
   },
   tabButtonActive: {
-    backgroundColor: '#1e90ff',
+    backgroundColor: '#ff0000',
   },
   tabButtonText: {
     color: '#aaa',

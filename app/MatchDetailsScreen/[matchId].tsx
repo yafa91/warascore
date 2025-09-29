@@ -3,6 +3,8 @@ import React, { useEffect, useState } from "react";
 import { useRoute } from "@react-navigation/native";
 import { TouchableOpacity } from "react-native";
 import axios from "axios";
+import { Animated } from "react-native";
+import { useRef } from "react";
 import { useNavigation, useRouter } from "expo-router";
 import { translateTeamName } from "../../utils/translateTeamName";
 import { Ionicons } from "@expo/vector-icons";
@@ -83,6 +85,46 @@ interface GoalInfo {
 
 const API_KEY = "b8b570d6f3ff7a8653dee3fb8922d929";
 
+const FlashingText = ({ children }: { children: React.ReactNode }) => {
+  const opacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const flash = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    flash.start();
+    return () => flash.stop();
+  }, [opacity]);
+
+  return (
+    <Animated.Text
+      style={{
+        opacity,
+        color: "#FFD700",
+        fontWeight: "bold",
+        textAlign: "center",
+        fontSize: 16,
+        textShadowColor: "#000",
+        textShadowOffset: { width: 1, height: 1 },
+        textShadowRadius: 2,
+      }}
+    >
+      {children}
+    </Animated.Text>
+  );
+};
+
 export default function MatchDetails() {
   const { matchId }: { matchId: string } = useLocalSearchParams();
   const [fixture, setFixture] = useState<MatchDetails | null>(null);
@@ -90,6 +132,8 @@ export default function MatchDetails() {
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
   const { isFavorite, toggleFavorite } = useFavorites();
+
+  const [lastEventTime, setLastEventTime] = useState<number>(0);
 
   const handleShare = async () => {
     try {
@@ -153,8 +197,8 @@ export default function MatchDetails() {
             <Ionicons
               name={
                 fixture && isFavorite(fixture.fixture.id)
-                  ? "notifications"
-                  : "notifications-outline"
+                  ? "star"
+                  : "star-outline"
               }
               size={24}
               color="white"
@@ -191,41 +235,48 @@ export default function MatchDetails() {
   }, [navigation]);
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-
-    const fetchMatchDetails = async () => {
-      try {
-        const fixtureRes = await fetch(
-          `https://v3.football.api-sports.io/fixtures?id=${matchId}`,
-          { headers: { "x-apisports-key": API_KEY } }
-        );
-        const fixtureData = await fixtureRes.json();
-        if (!fixtureData.response.length) {
-          setLoading(false);
-          return;
-        }
-        setFixture(fixtureData.response[0]);
-
-        const eventsRes = await fetch(
-          `https://v3.football.api-sports.io/fixtures/events?fixture=${matchId}`,
-          { headers: { "x-apisports-key": API_KEY } }
-        );
-        const eventsData = await eventsRes.json();
-        setEvents(eventsData.response);
-      } catch (err) {
-        console.error(err);
-      } finally {
+  const fetchMatchDetails = async () => {
+    try {
+      const fixtureRes = await fetch(
+        `https://v3.football.api-sports.io/fixtures?id=${matchId}`,
+        { headers: { "x-apisports-key": API_KEY } }
+      );
+      const fixtureData = await fixtureRes.json();
+      if (!fixtureData.response.length) {
         setLoading(false);
+        return;
       }
-    };
+      setFixture(fixtureData.response[0]);
+      const eventsRes = await fetch(
+        `https://v3.football.api-sports.io/fixtures/events?fixture=${matchId}`,
+        { headers: { "x-apisports-key": API_KEY } }
+      );
+      const eventsData = await eventsRes.json();
+      const newEvents = eventsData.response.filter((event: Event) => {
+        const eventSeconds = (event.time.elapsed ?? 0) * 60 + (event.time.extra ?? 0);
+        return eventSeconds > lastEventTime;
+      });
 
-    if (matchId) {
-      fetchMatchDetails();
-      intervalId = setInterval(fetchMatchDetails, 10000);
+      if (newEvents.length > 0) {
+        setEvents((prev) => [...prev, ...newEvents]);
+        const maxEventTime = Math.max(
+          ...newEvents.map((e: Event) => (e.time.elapsed ?? 0) * 60 + (e.time.extra ?? 0))
+        );
+        setLastEventTime(maxEventTime);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
+  };
 
+  if (matchId) {
+    fetchMatchDetails();
+    const intervalId = setInterval(fetchMatchDetails, 2000);
     return () => clearInterval(intervalId);
-  }, [matchId]);
+  }
+}, [matchId, lastEventTime]);
 
   if (loading) {
     return (
@@ -262,6 +313,8 @@ const MatchCard = ({
   const router = useRouter();
   const { teams, goals, league, fixture: fix } = fixture;
 
+  const [showBigChance, setShowBigChance] = useState(false);
+
   console.log(translateTeamName(teams.home.name));
 
   const now = new Date();
@@ -275,16 +328,6 @@ const MatchCard = ({
     const eventSeconds = event.time.elapsed * 60 + (event.time.extra ?? 0);
     return (
       eventSeconds >= secondsElapsed - 10 && eventSeconds <= secondsElapsed
-    );
-  });
-
-  const recentBigChance = events.some((event) => {
-    return (
-      (event.type === "Shot" || event.detail === "Big chance") &&
-      event.time.elapsed !== null &&
-      event.time.elapsed * 60 + (event.time.extra ?? 0) >=
-        secondsElapsed - 60 &&
-      event.time.elapsed * 60 + (event.time.extra ?? 0) <= secondsElapsed
     );
   });
 
@@ -359,6 +402,36 @@ const MatchCard = ({
     return grouped;
   };
 
+const [shownBigChanceIds, setShownBigChanceIds] = useState<Set<string>>(new Set());
+
+useEffect(() => {
+  let timer: NodeJS.Timeout | null = null;
+  const BIG_CHANCE_KEYWORDS = ["chance", "big chance", "danger", "opportunity", "clear chance"];
+
+  const bigChanceEvent = events.find((event) => {
+    const type = (event.type || "").toLowerCase();
+    const detail = (event.detail || "").toLowerCase();
+
+    const uniqueId = `${event.time.elapsed}-${event.team.id}-${event.player.id}`;
+    const alreadyShown = uniqueId && shownBigChanceIds.has(uniqueId);
+
+    if (alreadyShown || !event.time.elapsed) return false;
+    return BIG_CHANCE_KEYWORDS.some((keyword) => type.includes(keyword) || detail.includes(keyword));
+  });
+
+  if (bigChanceEvent) {
+    const uniqueId = `${bigChanceEvent.time.elapsed}-${bigChanceEvent.team.id}-${bigChanceEvent.player.id}`;
+
+    setShowBigChance(true);
+    setShownBigChanceIds((prev) => new Set(prev).add(uniqueId));
+
+    timer = setTimeout(() => setShowBigChance(false), 10000);
+  }
+  return () => {
+    if (timer) clearTimeout(timer);
+  };
+}, [events, shownBigChanceIds]);
+
   const groupedHomeGoals = groupGoalsByPlayer(homeGoals);
   const groupedAwayGoals = groupGoalsByPlayer(awayGoals);
 
@@ -421,26 +494,17 @@ const MatchCard = ({
           </Text>
         </View>
 
-        <View style={styles.scoreContainer}>
-          <Text style={styles.score}>{goals.home ?? 0}</Text>
-          <Text style={styles.scoreSeparator}> - </Text>
-          <Text style={styles.score}>{goals.away ?? 0}</Text>
-        </View>
-
-        {(recentGoal || recentBigChance) && (
-          <View style={{ marginTop: 10 }}>
-            <Text
-              style={{
-                color: "#FFD700",
-                fontWeight: "bold",
-                textAlign: "center",
-                fontSize: 16,
-              }}
-            >
-              🔥 Grosse occasion !
-            </Text>
-          </View>
-        )}
+         <View style={styles.scoreContainer}>
+  {fix.status.short === "NS" ? (
+    <Text style={styles.score}>-</Text>
+  ) : (
+    <>
+      <Text style={styles.score}>{goals.home}</Text>
+      <Text style={styles.scoreSeparator}> - </Text>
+      <Text style={styles.score}>{goals.away}</Text>
+    </>
+  )}
+</View>
 
         <View style={styles.teamContainer}>
           <TouchableOpacity
@@ -496,20 +560,11 @@ const MatchCard = ({
           ))}
         </View>
       </View>
-      {(recentGoal || recentBigChance) && (
-        <View style={{ marginTop: 10 }}>
-          <Text
-            style={{
-              color: "#FFD700",
-              fontWeight: "bold",
-              textAlign: "center",
-              fontSize: 16,
-            }}
-          >
-            🔥 Grosse occasion !
-          </Text>
-        </View>
-      )}
+  {showBigChance && (
+  <View style={{ marginTop: 10 }}>
+    <FlashingText>Grosse occasion !</FlashingText>
+  </View>
+)}
     </View>
   );
 };

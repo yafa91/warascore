@@ -36,7 +36,7 @@ export default function WaraScorePlus() {
 
       <View style={styles.bulletRow}>
         <Text style={styles.bullet}>✓</Text>
-        <Text style={styles.bulletText}>La compo de chaques équipes 45 minutes avant le coup d'envoi</Text>
+        <Text style={styles.bulletText}>Pas de pubs</Text>
       </View>
       <View style={styles.bulletRow}>
         <Text style={styles.bullet}>✓</Text>

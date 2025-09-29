@@ -1,4 +1,7 @@
 import React, { useCallback, useRef, useState } from "react";
+import FastImage from "react-native-fast-image";
+import { Image as ExpoImage } from 'expo-image';
+
 import {
   View,
   Text,
@@ -45,6 +48,22 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
   awayTeam = [],
 }) => {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+
+  const preloadPlayerImages = (homeTeam: Player[], awayTeam: Player[]) => {
+  const allPlayers = homeTeam.concat(awayTeam);
+  allPlayers.forEach(player => {
+    if (player.photo) {
+      ExpoImage.prefetch(player.photo);  
+      Image.prefetch(player.photo);      
+    }
+  });
+};
+
+React.useEffect(() => {
+  if (homeTeam.length || awayTeam.length) {
+    preloadPlayerImages(homeTeam, awayTeam);
+  }
+}, [homeTeam, awayTeam]);
 
   const getFullPosition = (pos: string) => {
     switch (pos) {
@@ -98,19 +117,20 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
           presentModal(player);
         }}
       >
-        {player.photo ? (
-          <Image
-            source={{ uri: player.photo }}
-            style={styles.playerPhoto}
-            resizeMode="cover"
-          />
-        ) : (
-          <Image
-            source={require("../assets/images/avatar-image.png")}
-            style={styles.playerPhoto}
-            resizeMode="cover"
-          />
-        )}
+{player.photo ? (
+  <ExpoImage
+    style={styles.playerPhoto}
+    source={player.photo}
+    contentFit="cover"
+    placeholder={require('../assets/images/avatar-image.png')}
+  />
+) : (
+  <Image
+    source={require("../assets/images/avatar-image.png")}
+    style={styles.playerPhoto}
+    resizeMode="cover"
+  />
+)}
         <Text style={styles.playerName} numberOfLines={1} ellipsizeMode="tail">
           {player.number} {getShortName(player.name)}
         </Text>
@@ -128,6 +148,10 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
       {awayTeam.map((p) => renderPlayer(p, false, presentModal))}
     </ImageBackground>
   );
+   
+  homeTeam.concat(awayTeam).forEach(player => {
+  if (player.photo) Image.prefetch(player.photo);
+});
 
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
 
@@ -251,7 +275,9 @@ const TeamCompositionField: React.FC<TeamCompositionFieldProps> = ({
   );
 };
 
+
 export default TeamCompositionField;
+
 
 const styles = StyleSheet.create({
   field: {

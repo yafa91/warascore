@@ -3,6 +3,7 @@ import { useNavigation } from "@react-navigation/native";
 import { router } from "expo-router";
 import Feather from "@expo/vector-icons/Feather";
 import * as Notifications from "expo-notifications";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { translateTeamName } from "../../utils/translateTeamName";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -59,17 +60,17 @@ const leagues = [
     logo: "https://media.api-sports.io/football/leagues/140.png",
   },
   {
-    id: 40,
-    name: "Championship",
-    logo: "https://media.api-sports.io/football/leagues/40.png",
+    id: 203,
+    name: "Süper Lig",
+    logo: "https://media.api-sports.io/football/leagues/203.png",
   },
 ];
 
 const leagueIdsToInclude = [
-  1, 2, 3, 4, 5, 6, 9, 11, 13, 14, 16, 17, 39, 40, 61, 62, 78, 88, 94, 98, 135,
+  1, 2, 3, 4, 5, 6, 9, 11, 13, 16, 17, 39, 40, 61, 62, 78, 88, 94, 98, 135,
   136, 140, 143, 2000, 2001, 2002, 98, 307, 203, 253, 263, 264, 266, 292, 307,
   848, 210, 30, 15, 858, 36, 34, 31, 894, 32, 239, 859, 38, 131, 141, 240, 329,
-  186, 743, 103, 113, 265, 283, 71, 922, 119, 667, 528, 531, 81, 660,
+  186, 743, 103, 113, 265, 283, 71, 922, 119, 667, 528, 531, 81, 660, 29, 525, 145, 48, 144,
 ];
 
 export default function LivePage() {
@@ -103,81 +104,11 @@ export default function LivePage() {
   }, []);
 
   useEffect(() => {
-    fetchMatches();
-    const interval = setInterval(fetchMatches, 10000);
-    return () => clearInterval(interval);
-  }, [viewMode, selectedLeagueId]);
+  let scoresCache = {}; 
 
-  const toggleFavorite = async (item: any, isFav: boolean) => {
-    try {
-      await toggleFavoriteContext(item);
-    } catch (error) {
-      console.error("Erreur lors de la modification des favoris:", error);
-    }
-  };
-
-  const scoresRef = useRef({});
-
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const matchNotificationSetting = await AsyncStorage.getItem(
-          "matchNotification"
-        );
-        if (matchNotificationSetting !== "true") return;
-
-        const liveMatches = await fetchLiveMatches();
-
-        for (let match of liveMatches) {
-          const matchId = match.fixture.id;
-          const currentScore = {
-            home: match.goals.home,
-            away: match.goals.away,
-          };
-
-          const prev = scoresRef.current[matchId];
-          initializedRef.current = true;
-
-          if (
-            prev &&
-            (currentScore.home !== prev.home || currentScore.away !== prev.away)
-          ) {
-            await Notifications.scheduleNotificationAsync({
-              content: {
-                title: "⚽ But marqué !",
-                body: `${match.teams.home.name} ${currentScore.home} - ${currentScore.away} ${match.teams.away.name}`,
-              },
-              trigger: null,
-            });
-          }
-
-          scoresRef.current[matchId] = currentScore;
-        }
-      } catch (error) {
-        console.error("Erreur dans la notification de but:", error);
-      }
-    }, 20000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchLiveMatches = async () => {
-    try {
-      const response = await fetch(`${BASE_URL}?live=all`, {
-        headers: { "x-apisports-key": API_KEY },
-      });
-      const data = await response.json();
-      return data.response;
-    } catch (error) {
-      console.error("Erreur lors du fetch des matchs live:", error);
-      return [];
-    }
-  };
-
-  const fetchMatches = async () => {
+  const fetchAndUpdate = async () => {
     try {
       let url = BASE_URL;
-
       if (viewMode === "live") {
         url += "?live=all";
       } else if (viewMode === "today") {
@@ -191,43 +122,45 @@ export default function LivePage() {
       const response = await fetch(url, {
         headers: { "x-apisports-key": API_KEY },
       });
-
       const data = await response.json();
-
       let filtered = [];
 
-      // même filtrage que toi
-      if (viewMode === "live") {
-        filtered = data.response.filter((match) =>
-          leagueIdsToInclude.includes(match.league.id)
-        );
-      } else if (viewMode === "today") {
-        filtered = data.response.filter((match) => match.league.id === 61);
+    if (viewMode === "live") {
+  const now = new Date();
+  filtered = data.response.filter((m) => {
+    const matchDate = new Date(m.fixture.date);
+    return (
+      leagueIdsToInclude.includes(m.league.id) &&
+      matchDate <= now && 
+      m.fixture.status.short !== "FT" &&
+      m.fixture.status.short !== "PST" &&
+      m.fixture.status.short !== "CANC"
+    );
+  });
+}
+else if (viewMode === "today") {
+        filtered = data.response.filter((m) => m.league.id === 61);
       } else if (viewMode === "league" && selectedLeagueId !== null) {
         if (selectedLeagueId === -1) {
           filtered = data.response.filter(
-            (match) => !leagueIdsToInclude.includes(match.league.id)
+            (m) => !leagueIdsToInclude.includes(m.league.id)
           );
         } else {
           filtered = data.response.filter(
-            (match) => match.league.id === selectedLeagueId
+            (m) => m.league.id === selectedLeagueId
           );
         }
       }
 
-      // tri
       const getMatchPriority = (match) => {
         const round = match.league.round?.toLowerCase() || "";
-
         const home = match.teams.home.name.toLowerCase();
         const away = match.teams.away.name.toLowerCase();
-
         const isClassico =
           (home.includes("psg") && away.includes("marseille")) ||
           (home.includes("marseille") && away.includes("psg")) ||
           (home.includes("real madrid") && away.includes("barcelona")) ||
           (home.includes("barcelona") && away.includes("real madrid"));
-
         const isEquipeDeFrance =
           home.includes("france") || away.includes("france");
 
@@ -242,7 +175,6 @@ export default function LivePage() {
       filtered.sort((a, b) => {
         const priorityA = getMatchPriority(a);
         const priorityB = getMatchPriority(b);
-
         if (priorityA !== priorityB) return priorityB - priorityA;
 
         const totalGoalsA = (a.goals.home || 0) + (a.goals.away || 0);
@@ -252,18 +184,62 @@ export default function LivePage() {
 
       const currentJson = JSON.stringify(matches);
       const newJson = JSON.stringify(filtered);
-
       if (currentJson !== newJson) {
         setMatches(filtered);
       }
+
+      const matchNotificationSetting = await AsyncStorage.getItem("matchNotification");
+      if (matchNotificationSetting === "true") {
+        for (let match of filtered) {
+          if (match.fixture.status.short === "NS") continue;
+          const matchId = match.fixture.id;
+          const currentScore = {
+            home: match.goals.home,
+            away: match.goals.away,
+          };
+
+          const prev = scoresCache[matchId];
+          if (
+            prev &&
+            (currentScore.home !== prev.home ||
+              currentScore.away !== prev.away)
+          ) {
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: "⚽ But marqué !",
+                body: `${match.teams.home.name} ${currentScore.home} - ${currentScore.away} ${match.teams.away.name}`,
+              },
+              trigger: null,
+            });
+          }
+
+          scoresCache[matchId] = currentScore;
+        }
+      }
     } catch (error) {
-      console.error("Erreur fetch:", error);
+      console.error("Erreur fetch & notif:", error);
       setMatches([]);
     } finally {
       setLoading(false);
     }
   };
 
+  fetchAndUpdate();
+  const interval = setInterval(() => {
+  fetchAndUpdate();
+}, viewMode === "live" ? 2000 : 10000);
+  return () => clearInterval(interval);
+}, [viewMode, selectedLeagueId]);
+
+
+  const toggleFavorite = async (item: any, isFav: boolean) => {
+    try {
+      await toggleFavoriteContext(item);
+    } catch (error) {
+      console.error("Erreur lors de la modification des favoris:", error);
+    }
+  };
+ 
   const renderItem = ({ item }) => {
     const { fixture, teams, goals, league } = item;
     const elapsed = fixture.status.elapsed;
@@ -288,9 +264,9 @@ export default function LivePage() {
           </View>
           <TouchableOpacity onPress={() => toggleFavorite(item, isFav)}>
             <Feather
-              name={isFav ? "bell-off" : "bell"}
-              size={20}
-              color={isFav ? "red" : "#fff"}
+              name={isFav ? "star" : "star"}
+              size={22}
+              color={isFav ? "#FFD700" : "#fff"}
             />
           </TouchableOpacity>
         </View>
@@ -304,32 +280,55 @@ export default function LivePage() {
           </View>
 
           <View style={styles.centerBlock}>
-            <Text style={styles.time}>
-              {fixture.status.short === "PEN"
-                ? "TAB"
-                : fixture.status.short === "HT"
-                ? "MT"
-                : fixture.status.short === "FT"
-                ? "Terminé"
-                : fixture.status.short === "INT"
-                ? "Interrompu"
-                : fixture.status.short === "PST"
-                ? "En attente"
-                : fixture.status.long === "Extra Time" ||
-                  fixture.status.long === "Prolongation" ||
-                  (fixture.status.elapsed !== null &&
-                    fixture.status.elapsed > 90)
-                ? `Prol : ${fixture.status.elapsed}'`
-                : fixture.status.elapsed !== null
-                ? `${fixture.status.elapsed}'`
-                : "En attente"}
-            </Text>
+<Text
+  style={[
+    styles.time,
+    fixture.status.short === "FT"
+      ? { color: "#FFFFFF" } 
+      : fixture.status.elapsed === null
+      ? { color: "#FFFFFF" } 
+      : { color: "red" }     
+  ]}
+>
+  {fixture.status.short === "PEN" ? (
+    "TAB"
+  ) : fixture.status.short === "HT" ? (
+    "MT"
+  ) : fixture.status.short === "FT" ? (
+    "Terminé"
+  ) : fixture.status.short === "INT" ? (
+    "Interrompu"
+  ) : fixture.status.long === "Extra Time" ||
+    fixture.status.long === "Prolongation" ? (
+    `Prol : ${fixture.status.elapsed}'`
+  ) : fixture.status.elapsed !== null ? (
+    fixture.status.elapsed <= 45 ? (
+      // 1ère mi-temps
+      fixture.status.elapsed < 45
+        ? `${fixture.status.elapsed}'`
+        : `45+'`
+    ) : fixture.status.elapsed <= 90 ? (
+      // 2ème mi-temps
+      fixture.status.elapsed < 90
+        ? `${fixture.status.elapsed}'`
+        : `90+'`
+    ) : (
+      // Prolongations
+      `${fixture.status.elapsed}'`
+    )
+  ) : (
+    // Avant match → heure de début
+    new Date(fixture.date).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  )}
+</Text>
 
             <Text style={styles.score}>
               {goals.home} - {goals.away}
             </Text>
           </View>
-
           <View style={styles.teamBlock}>
             <Image source={{ uri: teams.away.logo }} style={styles.logo} />
             <Text style={styles.team}>
@@ -363,7 +362,6 @@ export default function LivePage() {
             Live
           </Text>
         </TouchableOpacity>
-
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -409,9 +407,13 @@ export default function LivePage() {
           color="white"
           style={{ marginTop: 40 }}
         />
-      ) : matches.length === 0 ? (
-        <Text style={styles.emptyText}>Aucun match trouvé.</Text>
-      ) : (
+        ) : matches.length === 0 ? (
+  <View style={{ flex: 1, justifyContent: "flex-start", alignItems: "center", paddingTop: 100,  }}>
+    <MaterialCommunityIcons name="soccer" size={55} color="#999" style={{ marginBottom: -25 }} />
+    <Text style={styles.emptyText}>Aucun match trouvé.</Text>
+  </View>
+) : (
+
         <FlatList
           data={matches}
           keyExtractor={(item) => item.fixture.id.toString()}

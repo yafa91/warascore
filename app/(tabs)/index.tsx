@@ -8,7 +8,7 @@ import {
   Image,
   StyleSheet,
   FlatList,
-  Animated,
+  Animated, 
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -158,10 +158,16 @@ export function AppContent() {
       name: "Eredivisie",
       logo: "https://media.api-sports.io/football/leagues/88.png",
     },
+    
     {
-      id: 253,
-      name: "MLS",
-      logo: "https://media.api-sports.io/football/leagues/253.png",
+      id: 203,
+      name: "Süper Lig",
+      logo: "https://media.api-sports.io/football/leagues/203.png",
+    },
+      {
+      id: 2,
+      name: "Ligue Des Champions",
+      logo: "https://media.api-sports.io/football/leagues/2.png",
     },
   ];
 
@@ -178,7 +184,13 @@ export function AppContent() {
   } = useFavorites();
   const scrollX = useRef(new Animated.Value(0)).current;
 
-  const getCurrentDate = () => new Date().toISOString().split("T")[0];
+const getCurrentDate = () => {
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, "0");
+  const d = String(today.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`; // YYYY-MM-DD en local
+};
 
   const generateWeekDates = () => {
     const daysOfWeek = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
@@ -191,7 +203,10 @@ export function AppContent() {
       const day = date.getDate().toString().padStart(2, "0");
       const month = (date.getMonth() + 1).toString().padStart(2, "0");
       const dayLabel = daysOfWeek[date.getDay()];
-      const formattedDate = date.toISOString().split("T")[0];
+      const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1)
+  .toString()
+  .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
+
 
       let labelPrefix = dayLabel;
       if (i === -2) labelPrefix = "Avant-hier";
@@ -286,11 +301,11 @@ export function AppContent() {
         const allMatches = data.response || [];
 
         const europeanLeagues = [
-          1, 2, 3, 4, 5, 6, 9, 11, 13, 14, 16, 17, 39, 40, 61, 62, 78, 88, 94,
+          1, 2, 3, 4, 5, 6, 9, 11, 13, 16, 17, 39, 40, 61, 62, 78, 88, 94,
           98, 135, 136, 140, 143, 2000, 2001, 2002, 203, 253, 263, 264, 266,
           292, 307, 848, 210, 30, 15, 858, 36, 34, 31, 894, 32, 239, 859, 38,
           131, 141, 240, 329, 186, 743, 103, 113, 265, 283, 71, 922, 119, 667,
-          528, 531, 81, 29,
+          528, 531, 81, 29, 525, 48, 144,
         ];
 
         const europeanMatches = allMatches.filter((match: Match) =>
@@ -317,7 +332,7 @@ export function AppContent() {
     fetchMatches();
 
     if (selectedDate === getCurrentDate()) {
-      interval = setInterval(fetchMatches, 20000);
+      interval = setInterval(fetchMatches, 4000);
     }
 
     return () => {
@@ -376,31 +391,71 @@ export function AppContent() {
     return false;
   };
 
-  const sortedLiveMatches = [...liveMatches].sort((a, b) => {
-    const aPriority = isPriorityMatch(a) ? 0 : 1;
-    const bPriority = isPriorityMatch(b) ? 0 : 1;
-    return aPriority - bPriority;
-  });
+const leaguePriority: { [key: number]: number } = {
+  2: 1,    // Ligue des Champions
+  39: 2,   // Premier League
+  140: 3,  // La Liga
+  61: 4,   // Ligue 1
+  78: 5,   // Bundesliga
+  135: 6,  // Serie A
+  88: 7,   // Eredivisie
+  32: 8,   // Qualif Europe
+  3: 8,    //Ligue Europa
+};
 
-  const upcomingMatches = matches.filter((match) => {
-    const matchDate = new Date(match.fixture.date);
-    const matchTime = matchDate.getTime();
+ const sortedLiveMatches = [...liveMatches].sort((a, b) => {
+  // 1. Priorité spéciale (finales, clasicos, etc.)
+  const aPriorityMatch = isPriorityMatch(a) ? 0 : 1;
+  const bPriorityMatch = isPriorityMatch(b) ? 0 : 1;
+  if (aPriorityMatch !== bPriorityMatch) return aPriorityMatch - bPriorityMatch;
 
-    const finishedMatches = matches.filter((match) => {
-      const status = match.fixture.status.short;
-      return ["FT", "AET", "PEN"].includes(status);
-    });
+  // 2. Priorité selon la ligue
+  const aLeaguePriority = leaguePriority[a.league.id] || 99; 
+  const bLeaguePriority = leaguePriority[b.league.id] || 99;
+  if (aLeaguePriority !== bLeaguePriority) return aLeaguePriority - bLeaguePriority;
 
-    const startOfDay = new Date(selectedDate + "T00:00:00").getTime();
-    const endOfDay = new Date(selectedDate + "T23:50:00").getTime();
+  // 3. Sinon, par date
+  return new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime();
+});
+ 
 
-    return (
-      matchTime >= now &&
-      matchTime >= startOfDay &&
-      matchTime <= endOfDay &&
-      !["1H", "2H", "HT", "LIVE"].includes(match.fixture.status.short)
-    );
-  });
+const upcomingMatches = matches.filter((match) => {
+  const matchDate = new Date(match.fixture.date);
+  const matchTime = matchDate.getTime();
+
+  const startOfDay = new Date(selectedDate + "T00:00:00").getTime();
+  const endOfDay = new Date(selectedDate + "T23:59:00").getTime();
+
+  const excludedStatuses = ["1H", "2H", "HT", "LIVE", "PST", "TBD", "INT"];
+
+  return (
+    matchTime >= now &&
+    matchTime >= startOfDay &&
+    matchTime <= endOfDay &&
+    !excludedStatuses.includes(match.fixture.status.short)
+  );
+});
+
+ const leaguePriorityUpcoming: { [key: number]: number } = {
+  39: 1,   // Premier League
+  61: 2,   // Ligue 1
+  140: 3,  // La Liga
+  135: 4,  // Serie A
+  78: 5,   // Bundesliga
+  88: 6,   // Eredivisie
+  253: 7,  // MLS
+  32: 8,   // Qualif Europe
+  2: 9, //ldc 
+ };
+
+  const sortedUpcomingMatches = [...upcomingMatches].sort((a, b) => {
+  const aPriority = leaguePriorityUpcoming[a.league.id] || 99; 
+  const bPriority = leaguePriorityUpcoming[b.league.id] || 99;
+
+  if (aPriority !== bPriority) return aPriority - bPriority;
+
+  return new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime();
+});
 
   const { width } = Dimensions.get("window");
 
@@ -411,7 +466,7 @@ export function AppContent() {
   };
 
   const fontSize = getResponsiveFontSize(14);
-
+  
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#121212" }}>
       {loading ? (
@@ -449,7 +504,6 @@ export function AppContent() {
               </TouchableOpacity>
             </View>
           </View>
-
           {showSearch && (
             <View style={{ marginVertical: 10 }}>
               <TextInput
@@ -480,7 +534,6 @@ export function AppContent() {
                   setSearchResults(filteredMatches);
                 }}
               />
-
               {searchResults.length > 0 && (
                 <FlatList
                   data={searchResults}
@@ -490,7 +543,6 @@ export function AppContent() {
               )}
             </View>
           )}
-
           <View style={{ flex: 1, padding: 10 }}>
             <View style={{ height: 40, width: "100%" }}>
               <FlatList
@@ -535,13 +587,12 @@ export function AppContent() {
                 )}
               />
             </View>
-
             {liveMatches.length > 0 && (
               <>
                 <Text style={styles.title2}>En Direct</Text>
                 <View>
                   <FlatList
-                    data={sortedLiveMatches.slice(0, 4)}
+                    data={sortedLiveMatches.slice(0, 4)} //limite match en live !!
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     keyExtractor={(item) => item.fixture.id.toString()}
@@ -576,7 +627,6 @@ export function AppContent() {
                     </Text>
                   </TouchableOpacity>
                 )}
-
                 {finishedMatches.length > 0 && (
                   <TouchableOpacity
                     style={{
@@ -601,7 +651,6 @@ export function AppContent() {
                     </Text>
                   </TouchableOpacity>
                 )}
-
                 <TouchableOpacity
                   style={{
                     flex: 1,
@@ -626,7 +675,6 @@ export function AppContent() {
                 </TouchableOpacity>
               </ScrollView>
             </View>
-
             <View style={{ flex: 1 }}>
               {selectedTab === "classement" ? (
                 <View style={{ minHeight: 98, paddingTop: 10 }}>
@@ -666,7 +714,6 @@ export function AppContent() {
                       </TouchableOpacity>
                     )}
                   />
-
                   {loadingStandings ? (
                     <Text
                       style={{
@@ -693,76 +740,69 @@ export function AppContent() {
                       data={standings}
                       keyExtractor={(item) => item.team.id.toString()}
                       renderItem={({ item }) => (
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            justifyContent: "space-between",
-                            paddingVertical: 10,
-                            borderBottomColor: "#333",
-                            borderBottomWidth: 1,
-                            paddingHorizontal: 10,
-                          }}
-                        >
-                          <Text style={{ color: "#fff", width: 30 }}>
-                            {item.rank}
-                          </Text>
-                          <View
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              flex: 1,
-                            }}
-                          >
-                            <Image
-                              source={{ uri: item.team.logo }}
-                              style={{ width: 20, height: 20, marginRight: 8 }}
-                            />
-                            <Text style={{ color: "#fff" }}>
-                              {item.team.name}
-                            </Text>
-                          </View>
-                          <Text
-                            style={{
-                              color: "#fff",
-                              width: 30,
-                              textAlign: "right",
-                            }}
-                          >
-                            {item.points}
-                          </Text>
-                        </View>
+                        
+                        <TouchableOpacity
+  onPress={() => router.push(`/team/${item.team.id}`)}
+  style={{
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    borderBottomColor: "#333",
+    borderBottomWidth: 1,
+    paddingHorizontal: 10,
+  }}
+>
+  <Text style={{ color: "#fff", width: 30 }}>
+    {item.rank}
+  </Text>
+  <View
+    style={{
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+    }}
+  >
+    <Image
+      source={{ uri: item.team.logo }}
+      style={{ width: 20, height: 20, marginRight: 8 }}
+    />
+    <Text style={{ color: "#fff" }}>
+      {item.team.name}
+    </Text>
+  </View>
+  <Text
+    style={{
+      color: "#fff",
+      width: 30,
+      textAlign: "right",
+    }}
+  >
+    {item.points}
+  </Text>
+</TouchableOpacity>
+
+
                       )}
                     />
                   )}
                 </View>
               ) : (
-                <FlatList
-                  style={{ marginBottom: -42 }}
-                  data={
-                    selectedTab === "upcoming"
-                      ? upcomingMatches
-                      : finishedMatches
-                  }
-                  keyExtractor={(item) => item.fixture.id.toString()}
-                  showsVerticalScrollIndicator={false}
-                  renderItem={({ item }) => (
-                    <ScoreList item={item} onToggleFavorite={toggleFavorite} />
-                  )}
-                  ListEmptyComponent={() => (
-                    <View
-                      style={{
-                        width: "100%",
-                        alignItems: "center",
-                        padding: 10,
-                      }}
-                    >
-                      <Text style={{ color: "#A8A5A5", fontStyle: "italic" }}>
-                        Aucun match{" "}
-                        {selectedTab === "upcoming" ? "à venir" : "terminé"}
-                      </Text>
-                    </View>
-                  )}
-                />
+               <FlatList
+  style={{ marginBottom: -42 }}
+  data={selectedTab === "upcoming" ? sortedUpcomingMatches : finishedMatches}
+  keyExtractor={(item) => item.fixture.id.toString()}
+  showsVerticalScrollIndicator={false}
+  renderItem={({ item }) => (
+    <ScoreList item={item} onToggleFavorite={toggleFavorite} />
+  )}
+  ListEmptyComponent={() => (
+    <View style={{ width: "100%", alignItems: "center", padding: 10 }}>
+      <Text style={{ color: "#A8A5A5", fontStyle: "italic" }}>
+        Aucun match {selectedTab === "upcoming" ? "à venir" : "terminé"}
+      </Text>
+    </View>
+  )}
+/>
               )}
             </View>
           </View>
@@ -777,17 +817,43 @@ const translateTeamName = (name: string) => {
     "Paris Saint Germain": "PSG",
     "Manchester United": "Man United",
     "Al-Hilal Saudi FC": "Al Hilal",
+    "FC Volendam": "Volendam",
+    "GO Ahead Eagles": "GA Eagles",
+    "NEC Nijmegen": "NEC",
     "Universidad de Concepcion": "U. de Concepcion",
     "Mali W": "Mali",
     "South Africa W": "Afrique du Sud",
+    "Istanbul Basaksehir": "Basaksehir",
+    "Gazişehir Gaziantep": "Gaziantep",
     "Maccabi Tel Aviv": "M. Tel Aviv",
+    "Randers FC": "Randers",
     "Red Bull Salzburg": "RB Salzburg ",
+    "Hamburger SV": "Hamburger",
+    "FC Levadia Tallinn": "Levadia",
+    "Tallinna Kalev": "T. Kalev",
     "Ghana W": "Ghana",
+    "FC St. Pauli": "St. Pauli",
+    "FC Augsburg": "Augsburg",
+    "VfB Stuttgart": "Stuttgart",
+    "BSC Young Boys": "Young Boys",
     "FC Botosani": "Botosani",
+    "Al Khaleej Saihat": "Al Khaleej",
+    "Al-Ahli Jeddah": "Al Ahli",
+    "Al Wahda FC": "Al Wahda",
+    "Malmo FF": "Malmo",
+    "PEC Zwolle": "Zwolle",
+    "AZ Alkmaar": "Alkmaar",
+    "Al-Ittihad FC": "Al Ittihad",
+    "FC Basel 1893": "FC Basel",
+    "SC Freiburg": "Freiburg",
     "Nottingham Forest": "Nottingham",
+    "FC Heidenheim": "Heidenheim",
     "Tanzania W": "Tanzanie",
+    "1899 Hoffenheim": "Hoffenheim",
     "Rot-Weiß Essen": "RW Essen",
     "NK Slaven Belupo": "Slaven",
+    "FSV Mainz 05": "Mayence",
+    "Coquimbo Unido": "Coquimbo",
     "Union La Calera": "U. Calera",
     "Mineros de Zacatecas": "Mineros",
     "HNK Rijeka": "Rijeka",
@@ -796,6 +862,7 @@ const translateTeamName = (name: string) => {
     "HNK Hajduk Split": "Hajduk",
     "Istra 1961": "Istra",
     "Dinamo Bucuresti": "D. Bucarest",
+    "FK Crvena Zvezda": "Etoile Rouge",
     "Everton de Vina": "Everton",
     "Atletico Madrid": "Atl. Madrid",
     "Independiente Medellin": "Ind. Medellin",
@@ -806,19 +873,36 @@ const translateTeamName = (name: string) => {
     "Bogota FC": "Bogota",
     "Brown DE Adrogue": "Brown Adrogue",
     "Santiago Morning": "S.Morning",
-    Germany: "Allemagne",
+    "Germany": "Allemagne",
     "FC Copenhagen": "Copenhague",
+    "GKS Katowice W": "Katowice F",
+    "MB Rouisset": "Rouisset",
+    "RED Star FC 93": "Red Star",
+    "Real Madrid W": "Real Madrid F",
+    "Twente W": "Twente F",
+    "Atletico Madrid W": "Atletico Madrid F",
+    "Eintracht Frankfurt W": "Frankfort F",
     "Poland W": "Pologne",
+    "Roma W": "Roma F",
+    "Sporting CP W": "Sporting F",
+    "Paris FC W": "Paris FC F",
+    "Manchester United W": "Man United F",
+    "Brann W": "Brann F",
+    "Austria Wien W": "Autria Vienne F",
+    "Vorskla Poltava W": "Vorskla Poltava F",
+    "OH Leuven W": "Leuven F",
     "Netherlands W": "Pays-Bas",
     "Fortaleza FC": "Fortaleza",
     "Hammarby FF": "Hammarby",
+    "Ethiopia": "Ethiopie",
     "Nigeria W": "Nigeria",
     "Zambia W": "Zambie",
+    "Cape Verde Islands": "Cap-Vert",
     "Kristiansund BK": "Kristiansund",
     "BK Hacken": "Hacken",
     "Sweden W": "Suède",
-    Sweden: "Suède",
-    Sevilla: "FC Séville",
+    "Sweden": "Suède",
+    "Sevilla": "FC Séville",
     "Athletic Club": "Ath. Bilbao",
     "SC Braga": "Braga",
     "Belgium W": "Belgique",
@@ -831,12 +915,24 @@ const translateTeamName = (name: string) => {
     "Rangers de Talca": "Rangers Talca",
     "Deportes Santa Cruz": "Santa Cruz",
     "Avispa Fukuoka": "Fukuoka",
+    "Gambia": "Gambie",
+    "Albania": "Albanie",
+    "Latvia": "Lettonie",
+    "Fatih Karagümrük": "Karagümrük",
+    "Clermont Foot": "Clermont",
+    "Fortuna Sittard": "Fortuna",
+    "Norway": "Norvège",
+    "Estac Troyes": "Troyes",
+    "Romania": "Roumanie",
+    "Mauritania": "Mauritanie",
+    "South Sudan": "Soudan du Sud",
+    "Congo DR": "RD Congo",
     "Shimizu S-pulse": "Shimizu",
     "Yokohama F. Marinos": "Yokohama",
     "Rep. Of Ireland": "Irlande",
-    Hungary: "Hongrie",
-    Austria: "Autriche",
-    Cyprus: "Chypre",
+    "Hungary": "Hongrie",
+    "Austria": "Autriche",
+    "Cyprus": "Chypre",
     "San Marino": "Saint-Martin",
     "Kawazaki Frontale": "Kawazaki",
     "Union San Felipe": "San Filipe",
@@ -862,10 +958,10 @@ const translateTeamName = (name: string) => {
     "Olympique de Marseille": "OM",
     "Borussia Dortmund": "Dortmund",
     "Deportes Temuco": "Temuco",
-    Cambodia: "Cambodge",
+    "Cambodia": "Cambodge",
     "Saudi Arabia": "Arabie Saoudite",
-    Malta: "Malte",
-    Lithuania: "Lituanie",
+    "Malta": "Malte",
+    "Lithuania": "Lituanie",
     "RB Leipzig": "Leipzig",
     "Northern Ireland": "Irlande du Nord",
     "Algeria W": "Algerie",
@@ -879,105 +975,110 @@ const translateTeamName = (name: string) => {
     "Chelsea FC": "Chelsea",
     "Liverpool FC": "Liverpool",
     "Manchester City": "Man City",
-    Belgium: "Belgique",
-    Spain: "Espagne",
+    "Belgium": "Belgique",
+    "Spain": "Espagne",
     "Italy W": "Italie",
+    "KVC Westerlo": "Westerlo",
     "Dinamo Minsk": "Din.Minsk",
     "Inter Club d'Escaldes": "Inter",
-    England: "Angleterre",
+    "England": "Angleterre",
     "Eintracht Frankfurt": "Francfort",
     "VfL Wolfsburg": "Wolfsburg",
     "Portugal W": "Portugal",
     "West Ham United": "West Ham",
     "Inter Miami CF": "Inter Miami",
     "Equatorial Guinea": "Guinée Equatoriale",
-    Zambia: "Zambie",
-    Chad: "Tchad",
-    Somalia: "Somalie",
-    Guinea: "Guinée",
+    "Zambia": "Zambie",
+    "Olympiakos Piraeus": "Olympiakos",
+    "Chad": "Tchad",
+    "Somalia": "Somalie",
+    "Guinea": "Guinée",
+    "Union St. Gilloise": "USG",
     "Guinea-Bissau": "Guinée-Bissau",
-    Brazil: "Brésil",
-    Argentina: "Argentine",
+    "Brazil": "Brésil",
+    "Argentina": "Argentine",
     "Newcastle United": "Newcastle",
     "Bayern München": "Bayern",
     "São Paulo FC": "São Paulo",
-    Japan: "Japon",
+    "Japan": "Japon",
     "South Korea": "Corée du Sud",
     "United States": "États-Unis",
-    Mexico: "Mexique",
-    Australia: "Australie",
+    "Mexico": "Mexique",
+    "Australia": "Australie",
     "Haverfordwest County AFC": "Haverfordwest",
     "FC Differdange 03": "Differdange",
     "The New Saints": "TNS",
     "Vikingur Gota": "Vikingur",
     "Egnatia Rrogozhinë": "Egnatia",
     "Lincoln Red Imps FC": "Lincoln",
-    Canada: "Canada",
+    "Canada": "Canada",
     "Olimpija Ljubljana": "Olimpija",
     "Kairat Almaty": "Kairaty",
     "Seattle Sounders": "Seattle",
     "Columbus Crew": "Columbus",
-    Netherlands: "Pays-Bas",
+    "Netherlands": "Pays-Bas",
     "Olympiacos FC": "Olympiakos",
     "Panathinaikos FC": "Panathinaikos",
     "AEK Athens FC": "AEK Athènes",
-    Croatia: "Croatie",
+    "Croatia": "Croatie",
     "CS Constantine": "Constantine",
     "Villa San Carlos": "San Carlos",
-    Napoli: "Naples",
-    Italy: "Italie",
-    Denmark: "Danemark",
-    Scotland: "Ecosse",
-    Estonia: "Estonie",
+    "Napoli": "Naples",
+    "Italy": "Italie",
+    "Denmark": "Danemark",
+    "Scotland": "Ecosse",
+    "Estonia": "Estonie",
     "Faroe Islands": "Ile Féroé",
-    Moldova: "Moldavie",
+    "Moldova": "Moldavie",
     "Switzerland W": "Suisse",
-    Switzerland: "Suisse",
+    "Switzerland": "Suisse",
     "Iceland W": "Islande",
-    Greece: "Grèce",
-    Belarus: "Biélorussie",
-    Iceland: "Islande",
-    Poland: "Pologne",
+    "Greece": "Grèce",
+    "Belarus": "Biélorussie",
+    "Iceland": "Islande",
+    "Poland": "Pologne",
+    "Gimcheon Sangmu FC": "Gimcheon",
+    "Suwon City FC": "Suwon FC",
     "Norway W": "Norvège",
     "Finland W": "Finlande",
-    Serbia: "Serbie",
-    Turkey: "Turquie",
-    Iran: "Iran",
+    "Serbia": "Serbie",
+    "Turkey": "Turquie",
+    "Iran": "Iran",
     "Djurgardens IF": "Djurgarden",
     "Morocco W": "Maroc",
-    Ghana: "Ghana",
-    Cameroon: "Cameroun",
-    Uzbekistan: "Ouzbekistant",
+    "Ghana": "Ghana",
+    "Cameroon": "Cameroun",
+    "Uzbekistan": "Ouzbekistant",
     "Wales W": "Pays de Galles",
     "Ivory Coast": "Côte d'Ivoire",
-    Nigeria: "Nigéria",
+    "Nigeria": "Nigéria",
     "South Africa": "Afrique du Sud",
-    China: "Chine",
-    Qatar: "Qatar",
-    Egypt: "Égypte",
-    Tunisia: "Tunisie",
+    "China": "Chine",
+    "Qatar": "Qatar",
+    "Egypt": "Égypte",
+    "Tunisia": "Tunisie",
     "Flora Tallinn": "Flora",
     "Kalju Nomme": "Kalju",
     "Deportivo Armenio": "D. Armenio",
     "Cliftonville FC": "Cliftonville",
     "West Ham United U21": "West Ham 21",
-    Wales: "Pays de Galles",
-    Bulgaria: "Bulgarie",
-    Georgia: "Georgie",
-    Slovakia: "Slovaquie",
-    Slovenia: "Slovenie",
-    Türkiye: "Turquie",
+    "Wales": "Pays de Galles",
+    "Bulgaria": "Bulgarie",
+    "Georgia": "Georgie",
+    "Slovakia": "Slovaquie",
+    "Slovenia": "Slovenie",
+    "Türkiye": "Turquie",
     "Boreham Wood": "Boreham",
-    Algeria: "Algérie",
-    Uruguay: "Uruguay",
+    "Algeria": "Algérie",
+    "Uruguay": "Uruguay",
     "Hebburn Town": "Hebburn",
     "Deportes Tolima": "D. Tolima",
     "Alianza Petrolera": "Alianza",
     "Spennymoor Town": "Spennymoor",
-    Morocco: "Maroc",
-    Grêmio: "Grêmio",
+    "Morocco": "Maroc",
+    "Grêmio": "Grêmio",
     "Atlético Mineiro": "Atlético MG",
-    Internacional: "Internacional",
+    "Internacional": "Internacional",
     "Santos FC": "Santos",
     "Al-Nassr FC": "Al Nassr",
     "New York City FC": "New York City",
@@ -988,13 +1089,13 @@ const translateTeamName = (name: string) => {
     "CFR 1907 Cluj": "CFR Cluj",
     "Hapoel Beer Sheva": "H. Beer Sheva",
     "St Joseph S Fc": "St Josephs",
-    Comoros: "Comores",
+    "Comoros": "Comores",
     "Central African Republic": "Centrafique",
     "Al-Ahli Saudi FC": "Al Ahli",
     "Atlètic Club d'Escaldes": "Atletic Escaldes",
     "F91 Dudelange": "Dudelange",
     "PSV Eindhoven": "PSV",
-    Senegal: "Sénégal",
+    "Senegal": "Sénégal",
   };
   return translations[name] || name;
 };
@@ -1074,44 +1175,53 @@ const LiveScore = ({ item }: { item: Match }) => {
         }}
       >
         <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "flex-start",
-            alignItems: "center",
-          }}
-        >
-          <Image
-            source={{ uri: item.league.logo }}
-            style={{
-              width: 30,
-              height: 30,
-              resizeMode: "contain",
-              marginRight: 8,
-            }}
-          />
-          <Text
-            style={[
-              styles.league,
-              {
-                textAlign: "left",
-                marginTop: 3,
-              },
-            ]}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {item.league.name}
-          </Text>
-        </View>
-        <TouchableOpacity onPress={() => toggleFavorite(item, isFav)}>
-          <Feather
-            name={isFav ? "bell-off" : "bell"}
-            size={20}
-            color={isFav ? "red" : "#fff"}
-          />
-        </TouchableOpacity>
-      </View>
+  style={{
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    alignItems: "center",
+  }}
+>
+  <Image
+    source={{ uri: item.league.logo }}
+    style={{
+      width: 30,
+      height: 30,
+      resizeMode: "contain",
+      marginRight: 8,
+    }}
+  />
+  <Text
+    style={[
+      styles.league,
+      {
+        textAlign: "left",
+        marginTop: 3,
+      },
+    ]}
+    numberOfLines={1}
+    ellipsizeMode="tail"
+  >
+    {item.league.name}
+  </Text>
+</View>
 
+{/* Icône cloche en haut a droite */}
+<TouchableOpacity
+  onPress={() => toggleFavorite(item, isFav)}
+  style={{
+    position: "absolute",
+    top: 1,       
+    right: 9,     
+    zIndex: 2,
+  }}
+>
+  <Feather
+    name={isFav ? "star" : "star"}
+    size={23}
+    color={isFav ? "#FFD700" : "#fff"}
+  />
+</TouchableOpacity>
+      </View>
       <View style={styles.liveScoreBlock}>
         <View style={styles.liveScoreBlockTeam}>
           <Image
@@ -1161,7 +1271,7 @@ const ScoreList = ({
   item: Match;
   onToggleFavorite: (match: any) => void;
 }) => {
-  //console.log(item);
+
   const router = useRouter();
   const { isFavorite } = useFavorites();
   const time = new Date(item.fixture.date).toLocaleTimeString([], {
@@ -1242,10 +1352,10 @@ const ScoreList = ({
               <TouchableOpacity onPress={handleFavoritePress}>
                 <Ionicons
                   name={
-                    isFav ? "notifications-circle" : "notifications-outline"
+                    isFav ? "star" : "star-outline"
                   }
-                  size={30}
-                  color={isFav ? "#f33" : "#fff"}
+                  size={29}
+                  color={isFav ? "#FFD700" : "#fff"}
                 />
               </TouchableOpacity>
             </View>

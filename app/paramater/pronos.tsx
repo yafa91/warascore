@@ -12,6 +12,28 @@ import { useNavigation, useRouter } from 'expo-router';
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from '@expo/vector-icons';
 
+// Stocke un match terminé dans AsyncStorage
+const saveMatchResult = async (matchId: string, data: MatchApiData) => {
+  try {
+    await AsyncStorage.setItem(`match_${matchId}`, JSON.stringify(data));
+  } catch (e) {
+    console.error("[SAVE] Impossible de sauvegarder le match :", e);
+  }
+};
+
+// Récupère un match depuis le local
+const getLocalMatchResult = async (matchId: string): Promise<MatchApiData | null> => {
+  try {
+    const json = await AsyncStorage.getItem(`match_${matchId}`);
+    if (json) return JSON.parse(json);
+    return null;
+  } catch (e) {
+    console.error("[LOAD] Erreur lecture locale :", e);
+    return null;
+  }
+};
+
+
 const STORAGE_KEY_HISTORY = "pronostics";
 
 interface PronosticEntry {
@@ -113,19 +135,23 @@ export default function Pronos() {
     }, [])
   );
 
-  useEffect(() => {
-    async function fetchAllStatuses() {
-      const results: Record<string, MatchApiData | null> = {};
-      for (const entry of history) {
-        if (entry.matchId) {
-          const apiResult = await fetchMatchStatusAndScore(entry.matchId);
-          results[entry.matchId] = apiResult;
-        }
+useEffect(() => {
+  async function fetchAllStatuses() {
+    const results: Record<string, MatchApiData | null> = {};
+    for (const entry of history) {
+      if (!entry.matchId) continue;
+      let matchData = await getLocalMatchResult(entry.matchId);
+      if (!matchData) {
+        matchData = await fetchMatchStatusAndScore(entry.matchId);
+        if (matchData) saveMatchResult(entry.matchId, matchData);
       }
-      setMatchResults(results);
+      results[entry.matchId] = matchData;
     }
-    if (history.length > 0) fetchAllStatuses();
-  }, [history]);
+    setMatchResults(results);
+  }
+
+  if (history.length > 0) fetchAllStatuses();
+}, [history]);
 
   const getPredictionLabel = (prediction: PronosticEntry["prediction"]) => {
     if (prediction === "home") return "Victoire Équipe 1";

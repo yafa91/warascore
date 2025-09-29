@@ -57,7 +57,7 @@ const TabsNavigation = () => {
 					title: 'Favoris',
 					tabBarIcon: ({ focused, color }) => (
 						<Feather
-							name={'bell'}
+							name={'star'}
 							size={24}
 							color={color}
 						/>
@@ -96,7 +96,7 @@ const TabsNavigation = () => {
 					title: 'Profil',
 					tabBarIcon: ({ focused, color }) => (
 						<AntDesign
-							name={'adduser'}
+							name={'user-add'}
 							size={24}
 							color={color}
 						/>

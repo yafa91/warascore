@@ -41,7 +41,7 @@ const MentionsLegales = () => {
 
       <Text style={styles.sectionTitle}>Éditeur de l'application</Text>
       <Text style={styles.text}>
-        WaraScore est une application édité par WARADEV, SAS au capital de 200euro dont le siege est situé au 37 rue de la dauphine 91100 Corbeil-Essonnes.
+        WaraScore est une application édité par Warabi Dev, SAS au capital de 200euro dont le siege est situé au 37 rue de la dauphine 91100 Corbeil-Essonnes.
       </Text>
       <Text style={styles.text}>
         Contact : contact@warascore.com
@@ -54,7 +54,7 @@ const MentionsLegales = () => {
 
       <Text style={styles.sectionTitle}>Propriété intellectuelle</Text>
       <Text style={styles.text}>
-        Tous les éléments de l'application (logos, design, contenu, etc.) sont la propriété de WARADEV et ne peuvent être utilisés sans autorisation.
+        Tous les éléments de l'application (logos, design, contenu, etc.) sont la propriété de Warabi Dev et ne peuvent être utilisés sans autorisation.
       </Text>
 
       <Text style={styles.sectionTitle}>Collecte des données</Text>
@@ -70,7 +70,7 @@ const MentionsLegales = () => {
 
       <Text style={styles.sectionTitle}>Responsabilité</Text>
       <Text style={styles.text}>
-        Les informations fournies dans l'application sont données à titre indicatif. WARADEV ne peut être tenu responsable en cas d'erreur ou de mauvaise interprétation.
+        Les informations fournies dans l'application sont données à titre indicatif. Warabi Dev ne peut être tenu responsable en cas d'erreur ou de mauvaise interprétation.
       </Text>
 
       <Text style={styles.sectionTitle}>Droits d’accès et de suppression</Text>
@@ -82,7 +82,7 @@ const MentionsLegales = () => {
       <View style={styles.socialContainer}>
         <Text style={styles.socialTitle}>Suis-nous sur nos réseaux sociaux</Text>
         <View style={styles.iconsRow}>
-          <TouchableOpacity onPress={() => openLink('https://twitter.com')}>
+          <TouchableOpacity onPress={() => openLink('https://x.com/warascore?s=11')}>
             <View style={styles.iconBox}>
               <Entypo name="twitter" size={24} color="#ccc" />
             </View>
@@ -92,7 +92,7 @@ const MentionsLegales = () => {
               <AntDesign name="instagram" size={24} color="#ccc" />
             </View>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => openLink('https://tiktok.com')}>
+          <TouchableOpacity onPress={() => openLink('https://www.tiktok.com/@warascore?is_from_webapp=1&sender_device=pc')}>
             <View style={styles.iconBox}>
             <FontAwesome5 name="tiktok" size={24} color="#ccc" />
             </View>

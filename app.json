@@ -1,12 +1,13 @@
 {
   "expo": {
-    "name": "WARASCORE",
+    "name": "WaraScore",
     "slug": "warascore",
     "platforms": [
       "ios",
       "android"
     ],
     "scheme": "warascore",
+    "icon": "assets/images/waraicon.png",
     "splash": {
       "image": "",
       "resizeMode": "contain",
@@ -14,7 +15,9 @@
     },
     "ios": {
       "bundleIdentifier": "com.tesapp.nom",
-      "buildNumber": "1.0.0"
+      "buildNumber": "1.0.0",
+      "scheme": "warascore"
+
     },
     "android": {
       "package": "com.tesapp.nom",
@@ -22,7 +25,14 @@
     },
     "plugins": [
       "expo-router",
-      "expo-web-browser"
-    ]
+      "expo-web-browser",
+      "expo-font"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "18201be3-3d01-4522-bf51-37963fd1a9ae"
+      }
+    }
   }
 }

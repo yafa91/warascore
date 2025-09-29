@@ -12,6 +12,7 @@ import {
   Linking,
 } from "react-native";
 import React, { useEffect, useState } from "react";
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { translateTeamName } from "../utils/translateTeamName";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import TeamCompositionField from "./TeamCompositionField";
@@ -592,7 +593,6 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
               </Text>
             </TouchableOpacity>
 
-            {matchDetails?.fixture.status.short !== "NS" && (
               <TouchableOpacity
                 style={[
                   styles.tabButton,
@@ -609,8 +609,7 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
                   Compos
                 </Text>
               </TouchableOpacity>
-            )}
-
+          
             <TouchableOpacity
               style={[
                 styles.tabButton,
@@ -861,7 +860,6 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
                         Aucun événement
                       </Text>
                     )}
-
                     <Text
                       style={{
                         textAlign: "center",
@@ -907,6 +905,32 @@ export default function MatchDetailsTabs({ id }: { id: string }) {
                 );
               })()
             )}
+<ScrollView>
+  <View style={{ marginTop: 20, padding: 10, alignItems: "center" }}>
+    <Text style={{ color: "#ded2d2ff", fontWeight: "bold", marginBottom: 5 }}>
+      Informations de match
+    </Text>
+
+    {venue && (
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 5 }}>
+        <MaterialCommunityIcons name="stadium" size={20} color="#aaa" style={{ marginRight: 5 }} />
+        <Text style={{ color: "#aaa", fontWeight: "bold" }}>
+          {venue.name}, {venue.city}
+        </Text>
+      </View>
+    )}
+
+    {matchDetails?.fixture?.referee && (
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <MaterialCommunityIcons name="whistle" size={20} color="#aaa" style={{ marginRight: 5 }} />
+        <Text style={{ color: "#aaa", fontWeight: "bold" }}>
+          Arbitre : {matchDetails.fixture.referee}
+        </Text>
+      </View>
+    )}
+  </View>
+</ScrollView>
+
           </ScrollView>
         )}
 
@@ -1567,4 +1591,11 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     flexShrink: 1,
   },
+  infoTitle: {
+  fontSize: 16,
+  fontWeight: "bold",
+  marginTop: 10,
+  marginBottom: 5,
+  color: "white",
+},
 });

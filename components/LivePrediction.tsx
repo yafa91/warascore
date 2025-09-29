@@ -75,7 +75,7 @@ export default function LivePrediction({
   const liveStatuses = ["1H", "2H", "LIVE", "HT", "ET", "INT"];
   const canPredict =
   matchStatus === "NS" ||
-  (liveStatuses.includes(matchStatus) && elapsed !== null && elapsed <= 70);
+  (liveStatuses.includes(matchStatus) && elapsed !== null && elapsed <= 78);
 
   const bothTeamsAlreadyScored =
   events.some((e) => e.type === "Goal" && e.team.name.toLowerCase().includes(teamHome.toLowerCase()))&&
@@ -274,41 +274,42 @@ export default function LivePrediction({
   </>
 )}
 
-      {!confirmed && selected && secondSelected && (
-        <TouchableOpacity
-          style={styles.confirmButton}
-          onPress={async () => {
-            setConfirmed(true);
+ {!confirmed && selected && (
+  <TouchableOpacity
+    style={styles.confirmButton}
+    onPress={async () => {
+      setConfirmed(true);
 
-            const newEntry: PronosticEntry = {
-              matchId,
-              match: `${translateTeamName(teamHome)} vs ${translateTeamName(teamAway)}`,
-              prediction: selected,
-              actualResult: null,
-              result: null,
-              bothTeamsPrediction: secondSelected,
-              bothTeamsActual: null,
-              bothTeamsResult: null,
-              timestamp: Date.now(),
-              matchStatus,
-            };
+      const newEntry: PronosticEntry = {
+        matchId,
+        match: `${translateTeamName(teamHome)} vs ${translateTeamName(teamAway)}`,
+        prediction: selected,
+        actualResult: null,
+        result: null,
+        bothTeamsPrediction: secondSelected, // peut être null
+        bothTeamsActual: null,
+        bothTeamsResult: null,
+        timestamp: Date.now(),
+        matchStatus,
+      };
 
-            const updatedHistory = [...history, newEntry];
-            setHistory(updatedHistory);
-            await saveHistory(updatedHistory);
-            await saveCurrent({
-              selected,
-              secondSelected,
-              confirmed: true,
-              result: null,
-              secondResult: null,
-              matchStatus,
-            });
-          }}
-        >
-          <Text style={styles.confirmText}>Valider mon pronostic</Text>
-        </TouchableOpacity>
-      )}
+      const updatedHistory = [...history, newEntry];
+      setHistory(updatedHistory);
+      await saveHistory(updatedHistory);
+      await saveCurrent({
+        selected,
+        secondSelected,
+        confirmed: true,
+        result: null,
+        secondResult: null,
+        matchStatus,
+      });
+    }}
+  >
+    <Text style={styles.confirmText}>Valider mon pronostic</Text>
+  </TouchableOpacity>
+)}
+
     </View>
   );
 }

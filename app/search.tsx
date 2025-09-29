@@ -1,5 +1,6 @@
  import React, { useEffect, useRef, useState, useLayoutEffect } from "react";
 import { useNavigation } from "expo-router";
+import FastImage from 'react-native-fast-image';
 import {
   View,
   TextInput,
@@ -23,13 +24,31 @@ export const translateTeamName = (name: string): string => {
     "Avispa Fukuoka": "Fukuoka",
     "Rot-Weiß Essen": "RW Essen",
     "Shimizu S-pulse": "Shimizu",
+    "GKS Katowice W": "Katowice F",
+    "Twente W": "Twente F",
+    "Atletico Madrid W": "Atletico Madrid F",
+    "Poland W": "Pologne",
+    "Roma W": "Roma F",
+    "Sporting CP W": "Sporting F",
+    "Paris FC W": "Paris FC F",
+    "Manchester United W": "Man United F",
+    "Brann W": "Brann F",
+    "Austria Wien W": "Autria Vienne F",
+    "Vorskla Poltava W": "Vorskla Poltava F",
+    "OH Leuven W": "Leuven F",
     "Yokohama F. Marinos": "Yokohama",
     "Georgia": "Georgie",
     "Rapid Vienna": "Rapid Vienne",
     "Slovenia": "Slovenie",
+    "Fatih Karagümrük": "Karagümrük",
+    "Fortuna Sittard": "Fortuna",
+    "Union St. Gilloise": "USG",
+    "Al Wahda FC": "Al Wahda",
+    "Al-Ittihad FC": "Al Ittihad",
     "Sweden": "Suède",
     "Switzerland": "Suisse",
-     "Iceland W": "Islande",
+    "Olympiakos Piraeus": "Olympiakos",
+    "Iceland W": "Islande",
     "Greece": "Grèce",
     "Belarus": "Biélorussie",
     "Iceland": "Islande",
@@ -73,7 +92,6 @@ export const translateTeamName = (name: string): string => {
     "Jeju United FC": "Jeju United",
     "Jeonbuk Motors": "Jeonbuk",
     "IF Brommapojkarna": "Bromapojkarna",
-    "Poland W": "Pologne",
     "Sporting CP": "Sporting",
     "Club Brugge KV": "Club Brugge",
     "Lierse Kempenzonen": "k. Lierse SK",
@@ -94,8 +112,18 @@ export const translateTeamName = (name: string): string => {
     "Inter Club d'Escaldes": "Inter",
     "Portugal W": "Portugal",
     "Spain W": "Espagne",
+    "FC St. Pauli": "St. Pauli",
+    "FC Augsburg": "Augsburg",
+    "Al-Qadisiyah FC": "Al Qadsiah",
+    "Gimcheon Sangmu FC": "Gimcheon",
+    "Suwon City FC": "Suwon FC",
     "Tanzania": "Tanzanie",
     "Spain": "Espagne",
+    "Istanbul Basaksehir": "Basaksehir",
+    "1899 Hoffenheim": "Hoffenheim",
+    "NEC Nijmegen": "NEC",
+    "FC Volendam": "Volendam",
+    "GO Ahead Eagles": "GA Eagles",
     "Morocco W": "Maroc",
     "Los Angeles FC": "LAFC",
     "Dinamo Minsk": "Din.Minsk",
@@ -121,6 +149,7 @@ export const translateTeamName = (name: string): string => {
     "Manchester City": "Man City",
     "England": "Angleterre",
     "Eintracht Frankfurt": "Francfort",
+    "Coquimbo Unido": "Coquimbo",
     "VfL Wolfsburg": "Wolfsburg",
     "Algeria W": "Algerie",
     "West Ham United": "West Ham",
@@ -138,17 +167,30 @@ export const translateTeamName = (name: string): string => {
     "Everton de Vina": "Everton",
     "Inter Miami CF": "Inter Miami",
     "Deportes Temuco": "Temuco",
+    "Hamburger SV": "Hamburger",
     "Brazil": "Brésil",
+    "Randers FC": "Randers",
     "Fortaleza FC": "Fortaleza",
     "Argentina": "Argentine",
     "Cambodia": "Cambodge",
+    "Gambia": "Gambie",
+    "Gazişehir Gaziantep": "Gaziantep",
+    "Albania": "Albanie",
+    "Norway": "Norvège",
+    "Romania": "Roumanie",
+    "Mauritania": "Mauritanie",
+    "South Sudan": "Soudan du Sud",
+    "Latvia": "Lettonie",
     "San Marcos de Arica": "Arica",
     "Newcastle United": "Newcastle",
+    "Cape Verde Islands": "Cap-Vert",
     "Equatorial Guinea": "Guinée Equatoriale",
     "Zambia": "Zambie",
     "Chad": "Tchad",
     "Somalia": "Somalie",
     "Guinea": "Guinée",
+    "Ethiopia": "Ethiopie",
+    "Congo DR": "RD Congo",
     "Guinea-Bissau": "Guinée-Bissau",
     "Union San Felipe": "San Filipe",
     "São Paulo FC": "São Paulo",
@@ -192,10 +234,23 @@ export const translateTeamName = (name: string): string => {
     "Estonia": "Estonie",
     "Faroe Islands": "Ile Féroé",
     "Saudi Arabia W ": "Arabie Saoudite",
+    "FC Heidenheim": "Heidenheim",
+    "FSV Mainz 05": "Mayence",
+    "Malmo FF": "Malmo",
+    "FC Levadia Tallinn": "Levadia",
+    "Tallinna Kalev": "T. Kalev",
+    "FK Crvena Zvezda": "Etoile Rouge",
+    "VfB Stuttgart": "Stuttgart",
+    "Al Khaleej Saihat": "Al Khaleej",
+    "BSC Young Boys": "Young Boys",
+    "FC Basel 1893": "FC Basel",
+    "SC Freiburg": "Freiburg",
     "Turkey": "Turquie",
     "Cameroon": "Cameroun",
     "Ivory Coast": "Côte d'Ivoire",
+    "KVC Westerlo": "Westerlo",
     "Nigeria": "Nigéria",
+    "PEC Zwolle": "Zwolle",
     "South Africa": "Afrique du Sud",
     "China": "Chine",
     "France W": "France",
@@ -208,6 +263,10 @@ export const translateTeamName = (name: string): string => {
     "Deportes Santa Cruz": "Santa Cruz",
     "Universidad de Chile": "U.de Chile",
     "Uruguay": "Uruguay",
+    "Real Madrid W": "Real Madrid F",
+    "Eintracht Frankfurt W": "Frankfort F",
+    "RED Star FC 93": "Red Star",
+    "MB Rouisset": "Rouisset",
     "Morocco": "Maroc",
     "AFC Hermannstadt": "Hermannstadt",
     "Grêmio": "Grêmio",
@@ -217,6 +276,7 @@ export const translateTeamName = (name: string): string => {
     "Internacional": "Internacional",
     "Rep. Of Ireland": "Irlande",
     "Hungary": "Hongrie",
+    "AZ Alkmaar": "Alkmaar",
     "Austria": "Autriche",
     "Cyprus": "Chypre",
     "Comoros":"Comores",
@@ -245,14 +305,21 @@ const searchTranslations: { [key: string]: string } = {
   "espagne": "spain",
   "angleterre": "england",
   "allemagne": "germany",
+  "Estac Troyes": "Troyes",
+  "AZ Alkmaar": "Alkmaar",
   "tanzanie": "tanzania",
+  "Clermont Foot": "Clermont",
   "italie": "italy",
+  "arsenal": "arsenal fc",
   "italy": "italy",
   "france": "france",
   "comores": "comoros",
   "pays bas": "netherlands",
+  "norvège": "norway",
+  "alkmaar": "AZ Alkmaar",
   "portugal": "portugal",
   "belgique": "belgium",
+  "USG": "Union St. Gilloise",
   "argentine": "argentina",
   "centrafique":"Central African Republic",
   "bresil": "brazil",
@@ -339,42 +406,88 @@ export default function SearchScreen() {
   const router = useRouter();
   const navigation = useNavigation();
 
-  useEffect(() => {
-    const fetchMatchesForDay = async (date) => {
-      const dateStr = date.toISOString().split("T")[0];
-      const res = await fetch(`${API_URL}?date=${dateStr}`, {
-        headers: {
-          "x-apisports-key": API_KEY,
-        },
-      });
-      const json = await res.json();
-      return json.response || [];
-    };
+useEffect(() => {
+  const fetchMatchesForDay = async (date) => {
+    const dateStr = date.toISOString().split("T")[0];
+    const res = await fetch(`${API_URL}?date=${dateStr}`, {
+      headers: { "x-apisports-key": API_KEY },
+    });
+    const json = await res.json();
+    return json.response || [];
+  };
 
-    const fetchMultipleDays = async () => {
-      setLoading(true);
-      try {
-        const today = new Date();
+const fetchMultipleDays = async () => {
+  try {
+    setLoading(true);
+    const today = new Date();
 
-        const days = [];
-        for (let i = -30; i <= 50; i++) {
-          const d = new Date();
-          d.setDate(today.getDate() + i);
-          days.push(d);
-        }
+    // Charger seulement aujourd'hui et demain rapidement
+    const initialDays = [];
+    for (let i = 0; i <= 1; i++) {
+      const d = new Date();
+      d.setDate(today.getDate() + i);
+      initialDays.push(d);
+    }
 
-        const results = await Promise.all(days.map(fetchMatchesForDay));
-        const allMatches = results.flat();
-        setMatches(allMatches);
-      } catch (error) {
-        console.error("Erreur lors du chargement des matchs :", error);
-      } finally {
-        setLoading(false);
+    const initialMatches = await Promise.all(initialDays.map(fetchMatchesForDay));
+    setMatches(initialMatches.flat());
+    setLoading(false); // ✅ le spinner disparaît vite
+
+    // Charger les autres jours en arrière-plan
+    const moreDays = [];
+    for (let i = -30; i <= 50; i++) {
+      if (i > 1) { // éviter de recharger aujourd'hui + demain
+        const d = new Date();
+        d.setDate(today.getDate() + i);
+        moreDays.push(d);
       }
-    };
+    }
 
-    fetchMultipleDays();
-  }, []);
+    Promise.all(moreDays.map(fetchMatchesForDay)).then((moreMatches) => {
+      setMatches((prev) => [...prev, ...moreMatches.flat()]);
+    });
+  } catch (error) {
+    console.error("Erreur lors du chargement des matchs :", error);
+    setLoading(false);
+  }
+};
+
+  const fetchTodayMatches = async () => {
+    try {
+      const today = new Date();
+      const todayMatches = await fetchMatchesForDay(today);
+
+      setMatches((prevMatches) => {
+        const todayStr = today.toISOString().split("T")[0];
+        const filtered = prevMatches.filter(
+          (m) => m.fixture.date.split("T")[0] !== todayStr
+        );
+        return [...filtered, ...todayMatches];
+      });
+    } catch (error) {
+      console.error("Erreur lors du rechargement des matchs du jour :", error);
+    }
+  };
+
+  fetchMultipleDays();
+
+  const interval = setInterval(() => {
+    setMatches((prevMatches) => {
+      const liveStatuses = ["1H", "2H", "ET", "P", "LIVE", "HT", "BT", "INT"];
+      const liveMatches = prevMatches.filter((m) =>
+        liveStatuses.includes(m.fixture.status.short)
+      );
+
+      if (liveMatches.length > 0) {
+        fetchTodayMatches();
+      }
+
+      return prevMatches;
+    });
+  }, 10000);
+
+  return () => clearInterval(interval);
+}, []);
 
   useEffect(() => {
   if (searchText.length < 2) {
@@ -517,7 +630,10 @@ const LiveScore = ({ item }) => {
     {isLiveOrSpecialStatus && <LiveBadge />}
 
       <View style={styles.header}>
-        <Image source={{ uri: league.logo }} style={styles.leagueLogo} />
+<Image
+  source={{ uri: league.logo, cache: 'force-cache' }}
+  style={styles.leagueLogo}
+/>
         <Text style={styles.leagueText}>{league.name}</Text>
       </View>
 
@@ -535,14 +651,22 @@ const LiveScore = ({ item }) => {
 
       <View style={styles.teamsRow}>
         <View style={styles.team}>
-          <Image source={{ uri: teams.home.logo }} style={styles.teamLogo} />
+<Image
+  source={{ uri: teams.home.logo, cache: 'force-cache' }}
+  style={styles.teamLogo}
+/>
+
           <Text style={styles.teamName}>{translateTeamName(teams.home.name)}</Text>
         </View>
         <Text style={styles.score}>
           {goals.home} - {goals.away}
         </Text>
         <View style={styles.team}>
-          <Image source={{ uri: teams.away.logo }} style={styles.teamLogo} />
+  <Image
+  source={{ uri: teams.away.logo, cache: 'force-cache' }}
+  style={styles.teamLogo}
+/>
+
           <Text style={styles.teamName}>{translateTeamName(teams.away.name)}</Text>
         </View>
       </View>

@@ -38,29 +38,18 @@ export default function ProgrammeTVScreen() {
       const today = moment().format('YYYY-MM-DD');
       const tomorrow = moment().add(1, 'day').format('YYYY-MM-DD');
 
-      
+      // Matchs en direct
       const liveRes = await axios.get(`${API_URL}?live=all`, {
         headers: { 'x-apisports-key': API_KEY },
       });
 
-      const liveData = liveRes.data.response.filter(
-        (item) =>
-          Array.isArray(item.fixture.broadcasts) &&
-          item.fixture.broadcasts.length > 0
-      );
-
+      // Matchs à venir
       const upcomingRes = await axios.get(`${API_URL}?from=${today}&to=${tomorrow}`, {
         headers: { 'x-apisports-key': API_KEY },
       });
 
-      const upcomingData = upcomingRes.data.response.filter(
-        (item) =>
-          Array.isArray(item.fixture.broadcasts) &&
-          item.fixture.broadcasts.length > 0
-      );
-
-    
-      const allMatches = [...liveData, ...upcomingData].sort(
+      // Combine tous les matchs
+      const allMatches = [...liveRes.data.response, ...upcomingRes.data.response].sort(
         (a, b) => new Date(a.fixture.date) - new Date(b.fixture.date)
       );
 
@@ -84,7 +73,7 @@ export default function ProgrammeTVScreen() {
   if (fixtures.length === 0) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Aucune chaîne trouvée pour les matchs aujourd'hui ou en direct.</Text>
+        <Text style={styles.title}>Aucun match trouvé pour aujourd'hui ou en direct.</Text>
       </View>
     );
   }
@@ -104,7 +93,7 @@ export default function ProgrammeTVScreen() {
               🕒 {moment(item.fixture.date).format('DD/MM HH:mm')}
             </Text>
             <Text style={styles.channel}>
-              📺 {item.fixture.broadcasts.map((b) => b.station).join(', ')}
+              📺 {item.fixture.broadcasts?.map(b => b.station).join(', ') || 'Non disponible'}
             </Text>
           </View>
         )}
@@ -133,7 +122,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: 'white',
-    fontSize: 11,
+    fontSize: 14,
     marginBottom: 20,
     marginLeft: 10,
   },

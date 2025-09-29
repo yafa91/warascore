@@ -2,6 +2,7 @@ import { useLocalSearchParams } from "expo-router";
 import { translateTeamName } from "../../utils/translateTeamName";
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRouter } from 'expo-router';
+import { ScrollView } from "react-native";
 import React, { useEffect, useState, useLayoutEffect } from "react";
 import {
   View,
@@ -16,7 +17,7 @@ import axios from "axios";
 const API_URL = "https://v3.football.api-sports.io";
 const API_KEY = "b8b570d6f3ff7a8653dee3fb8922d929";
 
-const tabs = ["Effectif", "Classement", "Prochains Matchs", "Stats"];
+const tabs = ["Effectif", "Classement", "Prochains Matchs", "Matchs Terminés"];
 
 export default function TeamDetailsPage() {
   const { id } = useLocalSearchParams();
@@ -28,13 +29,10 @@ export default function TeamDetailsPage() {
   const [squad, setSquad] = useState([]);
   const [standings, setStandings] = useState([]);
   const [upcoming, setUpcoming] = useState([]);
+  const [finishedMatches, setFinishedMatches] = useState([]);
   const [selectedTab, setSelectedTab] = useState("Effectif");
   const [loading, setLoading] = useState(true);
   const [leagueId, setLeagueId] = useState(null);
-
-  const [teamStats, setTeamStats] = useState(null);
-  const [topScorer, setTopScorer] = useState(null);
-  const [topAssist, setTopAssist] = useState(null);
 
   const today = new Date();
   const season = today.getMonth() + 1 >= 7 ? today.getFullYear() : today.getFullYear() - 1;
@@ -73,7 +71,7 @@ export default function TeamDetailsPage() {
   useEffect(() => {
     if (selectedTab === "Classement" && !leagueId) return;
     if (team) {
-      if (selectedTab === "Stats") fetchStatsData();
+      if (selectedTab === "Matchs Terminés") fetchFinishedMatches();
       else fetchTabData();
     }
   }, [selectedTab, team, leagueId]);
@@ -140,49 +138,17 @@ export default function TeamDetailsPage() {
     setLoading(false);
   };
 
-  /** Récupération stats (Meilleur buteur, meilleur passeur, stats globales + nouvelles stats) */
-  const fetchStatsData = async () => {
+  /** Récupération des derniers matchs terminés */
+  const fetchFinishedMatches = async () => {
     setLoading(true);
     try {
-      // Joueurs avec stats
-      let page = 1;
-      let allPlayers: any[] = [];
-      let totalPages = 1;
-
-      do {
-        const { data } = await axios.get(`${API_URL}/players`, {
-          params: { team: id, season, page },
-          headers: { "x-apisports-key": API_KEY },
-        });
-        allPlayers = [
-          ...allPlayers,
-          ...data.response.map((p) => ({
-            id: p.player.id,
-            name: p.player.name,
-            photo: p.player.photo,
-            goals: p.statistics[0]?.goals?.total || 0,
-            assists: p.statistics[0]?.goals?.assists || 0,
-            position: p.player.position
-          }))
-        ];
-        totalPages = data.paging.total;
-        page++;
-      } while (page <= totalPages);
-
-      const sortedByGoals = [...allPlayers].sort((a, b) => b.goals - a.goals);
-      const sortedByAssists = [...allPlayers].sort((a, b) => b.assists - a.assists);
-      setTopScorer(sortedByGoals[0] || null);
-      setTopAssist(sortedByAssists[0] || null);
-
-      // Stats globales
-      const { data: statsData } = await axios.get(`${API_URL}/teams/statistics`, {
-        params: { team: id, season },
+      const { data } = await axios.get(`${API_URL}/fixtures`, {
+        params: { team: id, season, status: 'FT', last: 20 },
         headers: { "x-apisports-key": API_KEY },
       });
-      setTeamStats(statsData.response);
-
+      setFinishedMatches(data.response);
     } catch (error) {
-      console.error("Erreur récupération stats", error);
+      console.error("Erreur récupération matchs terminés", error);
     }
     setLoading(false);
   };
@@ -217,7 +183,7 @@ export default function TeamDetailsPage() {
     </TouchableOpacity>
   );
 
-  /** Rendus joueurs, classement, fixture */
+  /** Rendus joueurs, classement, fixture, matchs terminés */
   const renderPlayer = ({ item }) => (
     <View style={{ flexDirection: "row", alignItems: "center", padding: 10, borderBottomWidth: 0.5, borderColor: "#444" }}>
       <Image source={{ uri: item.photo }} style={{ width: 40, height: 40, borderRadius: 20, marginRight: 10 }} />
@@ -264,61 +230,21 @@ export default function TeamDetailsPage() {
     );
   };
 
-  /** Rendu stats enrichi */
-  const renderStats = () => {
-    if (!teamStats) return null;
-
-    const goalsFor = teamStats.goals?.for?.total ?? 0;
-    const goalsAgainst = teamStats.goals?.against?.total ?? 0;
-    const shotsPerMatch = teamStats.shots?.total && teamStats.fixtures?.played?.total
-      ? (teamStats.shots.total / teamStats.fixtures.played.total).toFixed(1)
-      : 0;
-    const shotsOnTargetPerc = teamStats.shots?.on?.total && teamStats.shots?.total
-      ? ((teamStats.shots.on.total / teamStats.shots.total) * 100).toFixed(1)
-      : 0;
-    const possessionAvg = teamStats.possession?.avg ?? 0;
-    const foulsPerMatch = teamStats.fouls?.total && teamStats.fixtures?.played?.total
-      ? (teamStats.fouls.total / teamStats.fixtures.played.total).toFixed(1)
-      : 0;
-    const cornersPerMatch = teamStats.corners?.total && teamStats.fixtures?.played?.total
-      ? (teamStats.corners.total / teamStats.fixtures.played.total).toFixed(1)
-      : 0;
-    const passesAccuratePerc = teamStats.passes?.accuracy?.total ?? 0;
+  const renderFinishedMatches = ({ item }) => {
+    const home = item.teams.home;
+    const away = item.teams.away;
+    const fixtureDate = new Date(item.fixture.date);
+    const date = fixtureDate.toLocaleDateString();
 
     return (
-      <View style={{ padding: 15 }}>
-        {topScorer && (
-          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 15 }}>
-            <Image source={{ uri: topScorer.photo }} style={{ width: 50, height: 50, borderRadius: 25, marginRight: 10 }} />
-            <View>
-              <Text style={{ color: "white", fontWeight: "bold", fontSize: 16 }}>Meilleur buteur</Text>
-              <Text style={{ color: "#ccc" }}>{topScorer.name} - {topScorer.goals} buts</Text>
-            </View>
-          </View>
-        )}
-
-        {topAssist && (
-          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 15 }}>
-            <Image source={{ uri: topAssist.photo }} style={{ width: 50, height: 50, borderRadius: 25, marginRight: 10 }} />
-            <View>
-              <Text style={{ color: "white", fontWeight: "bold", fontSize: 16 }}>Meilleur passeur</Text>
-              <Text style={{ color: "#ccc" }}>{topAssist.name} - {topAssist.assists} passes</Text>
-            </View>
-          </View>
-        )}
-
-        <View style={{ marginTop: 20 }}>
-          <Text style={{ color: "white", fontWeight: "bold", fontSize: 16, marginBottom: 10 }}>Stats de l'équipe</Text>
-          <Text style={{ color: "#ccc" }}>Buts marqués : {goalsFor}</Text>
-          <Text style={{ color: "#ccc" }}>Buts encaissés : {goalsAgainst}</Text>
-          <Text style={{ color: "#ccc" }}>Tirs par match : {shotsPerMatch}</Text>
-          <Text style={{ color: "#ccc" }}>Tirs cadrés (%) : {shotsOnTargetPerc}</Text>
-          <Text style={{ color: "#ccc" }}>Possession moyenne : {possessionAvg}%</Text>
-          <Text style={{ color: "#ccc" }}>Fautes par match : {foulsPerMatch}</Text>
-          <Text style={{ color: "#ccc" }}>Corners par match : {cornersPerMatch}</Text>
-          <Text style={{ color: "#ccc" }}>Précision passes : {passesAccuratePerc}%</Text>
+      <TouchableOpacity onPress={() => router.push(`/MatchDetailsScreen/${item.fixture.id}`)} style={{ padding: 10, marginVertical: 5, backgroundColor: "#1e1e1e", borderRadius: 10 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
+          <Text style={{ color: "white", fontWeight: "bold" }}>
+            {translateTeamName(home.name)} {item.goals.home} - {item.goals.away} {translateTeamName(away.name)}
+          </Text>
+          <Text style={{ color: "#ccc" }}>{date}</Text>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -331,38 +257,49 @@ export default function TeamDetailsPage() {
   const listData =
     selectedTab === "Classement" ? standings :
     selectedTab === "Effectif" ? squad :
-    selectedTab === "Prochains Matchs" ? upcoming : [];
+    selectedTab === "Prochains Matchs" ? upcoming :
+    selectedTab === "Matchs Terminés" ? finishedMatches : [];
 
   const renderItem =
     selectedTab === "Classement" ? renderStanding :
     selectedTab === "Effectif" ? renderPlayer :
     selectedTab === "Prochains Matchs" ? renderFixture :
-    selectedTab === "Stats" ? renderStats :
+    selectedTab === "Matchs Terminés" ? renderFinishedMatches :
     null;
 
   return (
     <View style={{ flex: 1, backgroundColor: "#121212" }}>
       <View style={{ alignItems: "center", marginVertical: 20 }}>
         <Image source={{ uri: team.logo }} style={{ width: 80, height: 80, marginBottom: 10 }} />
-        <Text style={{ fontSize: 22, fontWeight: "bold", textAlign: "center", color: "white" }}>{translateTeamName(team.name)}</Text>
+        <Text style={{ fontSize: 22, fontWeight: "bold", textAlign: "center", color: "white" }}>
+          {translateTeamName(team.name)}
+        </Text>
         {coach && <Text style={{ fontSize: 16, color: "#ccc", marginTop: 5 }}>Entraîneur: {coach.name}</Text>}
-        <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 15 }}>{tabs.map(renderTab)}</View>
+
+        {/* Onglets scrollables */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 10, marginTop: 15 }}
+        >
+          {tabs.map(renderTab)}
+        </ScrollView>
       </View>
 
       {loading ? (
         <ActivityIndicator size="large" color="#000000" style={{ marginTop: 20, flex: 1 }} />
       ) : (
-        selectedTab === "Stats" ? (
-          renderStats()
-        ) : (
-          <FlatList
-            style={{ flex: 1, paddingHorizontal: 10 }}
-            data={listData}
-            keyExtractor={(item) => selectedTab === "Classement" ? item.team.id.toString() : selectedTab === "Effectif" ? item.id.toString() : item.fixture.id.toString()}
-            renderItem={renderItem}
-            showsVerticalScrollIndicator={false}
-          />
-        )
+        <FlatList
+          style={{ flex: 1, paddingHorizontal: 10 }}
+          data={listData}
+          keyExtractor={(item) =>
+            selectedTab === "Classement" ? item.team.id.toString() :
+            selectedTab === "Effectif" ? item.id.toString() :
+            item.fixture.id.toString()
+          }
+          renderItem={renderItem}
+          showsVerticalScrollIndicator={false}
+        />
       )}
     </View>
   );
